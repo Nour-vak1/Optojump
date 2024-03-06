@@ -14,7 +14,7 @@ CMJ_UI <- function(id) {
              selectInput(ns("gender_select"), label = "Genre", choices = c("Homme", "Femme", "Non binaire")),
              actionButton(ns("submit_button"), label = "Soumettre")
       ),
-    ),
+    ), 
     fluidRow(
       column(width = 12,
              plotlyOutput(ns("bar_chart"))
@@ -24,9 +24,10 @@ CMJ_UI <- function(id) {
 }
 
 # Server module
+# Server module
 CMJ_Server <- function(input, output, session) {
   ns <- session$ns
-  cmj_data <- reactiveVal(NULL)
+  isDataProcessed <- reactiveVal(NULL)
   
   observeEvent(input$submit_button, {
     req(input$xml_file, input$athlete_name, input$gender_select)
@@ -38,69 +39,105 @@ CMJ_Server <- function(input, output, session) {
     
     #Resultats en colonnes
     result <- parse_xml_file(xml_file, columns_to_extract)
-    #print(result)
-
-    # Si préférence résultats en ligne
-
-    ###############################################
-    result <- as.data.frame(t(result))
-    # Définir les noms de colonnes avec la première ligne
-    names(result) <- unlist(result[1, ])
-    # Supprimer la première ligne car elle est maintenant utilisée comme noms de colonnes
-    result <- result[-1, ]
-    result <- as.numeric(result)
     
-    # Imprimer la plus grande valeur
-    max_value <- max(result)
-    print(max_value)
+    # Si préférence résultats en ligne
+    
+    ###############################################
+    
+    if (!is.null(result) && length(result) > 0) {
+      
+      result <- as.data.frame(t(result))
+      # Définir les noms de colonnes avec la première ligne
+      names(result) <- unlist(result[1, ])
+      # Supprimer la première ligne car elle est maintenant utilisée comme noms de colonnes
+      result <- result[-1, ]
+      result <- as.numeric(result)
+      
+      
+      # Imprimer la plus grande valeur
+      max_value <- max(result)
+      
+      Test = "CMJ"
+      Nom <- input$athlete_name
+      Sexe <- input$gender_select
+      
+      # Création d'un dataframe avec les données
+      nouvelle_ligne <- data.frame(Test = Test, Nom = Nom, Hauteur = max_value, Sexe = Sexe, isAthlete = FALSE)
+    }
+    
+    # Vérification si le fichier CSV existe
+    if (!file.exists("results_globaux_CMJ.csv")) {
+      # Si le fichier n'existe pas, écrire le dataframe complet
+      write.csv(nouvelle_ligne, file = "results_globaux_CMJ.csv", row.names = FALSE)
+    } else {
+      # Si le fichier existe, lire les données actuelles
+      donnees_existantes <- read.csv("results_globaux_CMJ.csv")
+      # Ajouter la nouvelle ligne aux données existantes
+      donnees_combinees <- rbind(donnees_existantes, nouvelle_ligne)
+      # Réécrire le fichier CSV avec toutes les données
+      write.csv(donnees_combinees, file = "results_globaux_CMJ.csv", row.names = FALSE)
+      isDataProcessed(TRUE)
+    }
     
     ##############################################
     
   })
+
+
   
   output$bar_chart <- renderPlotly({
-    if (!is.null(cmj_data())) {
-      athlete_name <- input$athlete_name
-      athlete_data <- cmj_data()[cmj_data()$Nom == athlete_name, ]
+  req(input$xml_file, input$athlete_name, input$gender_select, isDataProcessed())
+  if (file.exists("results_globaux_CMJ.csv")) {
+    donnees <- read.csv("results_globaux_CMJ.csv")
+
+    # Vérifier si le dataframe n'est pas vide
+    if (!is.null(donnees) && nrow(donnees) > 0) {
       
-      if (nrow(athlete_data) > 0) {
-        largeur <- c(0.2, 0.2)
-        # Créer le graphique en barres empilées avec Plotly
-        fig <- plot_ly(athlete_data, x = ~Test, type = 'bar', width = largeur)
+      hauteur_record <- max(donnees$Hauteur)
+      data_standeur <- donnees[nrow(donnees), ] # Utilisation directe des données de cmj_data()
+
+      largeur <- c(0.2, 0.2)
+      # Créer le graphique en barres empilées avec Plotly
+      fig <- plot_ly(donnees, x = ~Test, type = 'bar', width = largeur)
         
-        # Ajouter une trace pour la deuxième barre avec des valeurs de la deuxième colonne Hauteur
-        fig <- fig %>% add_trace(y = ~athlete_data$Hauteur[2], name = 'Hauteur 2', marker = list(color = '#F9E9CA'), text = paste(round(athlete_data$Hauteur[2], 2), "cm"))
+      # Ajouter une trace pour la deuxième barre avec des valeurs de la deuxième colonne Hauteur
+      fig <- fig %>% add_trace(y = ~hauteur_record, name = 'Hauteur 2', marker = list(color = '#F9E9CA'), text = paste(round(hauteur_record, 2), "cm"))
         
-        # Ajouter une trace pour la première barre avec des valeurs de la première colonne Hauteur
-        fig <- fig %>% add_trace(y = ~athlete_data$Hauteur[1], name = 'Hauteur 1', marker = list(color = '#2C2F65'), text = paste(round(athlete_data$Hauteur[1], 2), "cm"))
+      # Ajouter une trace pour la première barre avec des valeurs de la première colonne Hauteur
+      fig <- fig %>% add_trace(y = ~data_standeur$Hauteur, name = 'Hauteur 1', marker = list(color = '#2C2F65'), text = paste(round(data_standeur$Hauteur, 2), "cm"))
         
-        moyenne <- mean(cmj_data()$Hauteur)
+      moyenne <- mean(donnees$Hauteur)
         
-        # Définir le mode de barres empilées
-        fig <- fig %>% layout(yaxis = list(title = 'Hauteur'), barmode = 'overlay')
-        hline <- function(y = mean(cmj_data()$Hauteur), color = "#C5243D") {
-          list(
-            type = "line",
-            x0 = 0,
-            x1 = 1,
-            xref = "paper",
-            y0 = moyenne,
-            y1 = moyenne,
-            line = list(color = color, dash = "dot")
-          )
-        }
-        
-        # Définir le mode de barres empilées
-        fig <- fig %>% layout(
-          shapes = list(hline(0.9)),
-          yaxis = list(title = 'Hauteur'),
-          barmode = 'overlay'
+      # Définir le mode de barres empilées
+      fig <- fig %>% layout(yaxis = list(title = 'Hauteur'), barmode = 'overlay')
+      hline <- function(y = moyenne, color = "#C5243D") {
+        list(
+          type = "line",
+          x0 = 0,
+          x1 = 1,
+          xref = "paper",
+          y0 = moyenne,
+          y1 = moyenne,
+          line = list(color = color, dash = "dot")
         )
-        
-        return(fig)
-      } else {
-        showNotification("Aucune donnée trouvée pour cet athlète", type = "warning")
       }
+        
+      # Définir le mode de barres empilées
+      fig <- fig %>% layout(
+        shapes = list(hline(0.9)),
+        yaxis = list(title = 'Hauteur'),
+        barmode = 'overlay'
+      )
+        
+      return(fig)
+    } else {
+      print("Le fichier CSV est vide.")
     }
+  } else {
+    print("Le fichier CSV n'existe pas.")
+  }
+  isDataProcessed <- reactiveVal(NULL)
+  
   })
+
 }
