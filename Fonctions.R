@@ -505,17 +505,21 @@ creer_grapheline <- function(DF_gauche, DF_droit, indice_colonne) {
 
 
 
-creer_camembert <- function(DF_gauche, DF_droit, indice_de_colonne) {
+creer_camembert <- function(DF, indice_de_colonne) {
+  # Filtrer les données pour les lignes où la colonne "G/D" vaut "G" ou "D"
+  DF_gauche <- DF[DF$`G/D` == "G", ]
+  DF_droit <- DF[DF$`G/D` == "D", ]
+  
   # Calculer la moyenne pour chaque DataFrame
-  moyenne_gauche <- mean(DF_gauche[, indice_de_colonne])
-  moyenne_droit <- mean(DF_droit[, indice_de_colonne])
+  moyenne_gauche <- mean(DF_gauche[, indice_de_colonne], na.rm = TRUE)
+  moyenne_droit <- mean(DF_droit[, indice_de_colonne], na.rm = TRUE)
   
   # Créer les étiquettes et les valeurs pour le graphique camembert
   labels <- c('Gauche', 'Droit')
   valeurs <- c(moyenne_gauche, moyenne_droit)
   
   # Créer le graphique camembert avec Plotly
-  camembert <- plot_ly(labels = labels, values = valeurs, type = 'pie', 
+  camembert <- plot_ly(labels = labels, values = valeurs, type = 'pie',
                        text = paste("Côté: ", labels, "<br>", "Moyenne: ", round(valeurs, 2)),
                        hoverinfo = "text", marker = list(colors = c('#C5243D', '#2C2F65'))) %>%
     layout(title = "Moyenne des données gauche et droite", showlegend = FALSE)
