@@ -1,0 +1,47 @@
+/* Personnalisation générale */
+body {
+  background-color: #2C2F65 !important;
+  color: white !important;
+}
+
+.shiny-output-error,
+.shiny-output-error-messages,
+.shiny-output-error-message,
+h1, h2, h3, h4, h5, h6 {
+  color: white !important;
+}
+
+.tabset-panel .nav-link:hover {
+  color: white !important;
+  background-color: #2C2F65 !important;
+}
+
+.nav-item.active .nav-link {
+  background-color: #2C2F65 !important;
+  color: white !important;
+}
+
+.nav-tabs > li > a {
+  background-color: #2C2F65 !important;
+  color: white !important;
+}
+
+.nav-tabs > li.active > a {
+  background-color: #2C2F65 !important;
+  color: white !important;
+}
+
+/* Augmente la taille des titres dans le titlePanel */
+.title h2 {
+  font-size: 1.8em;
+}
+
+/* Augmente la taille des textes dans les onglets */
+.nav-tabs > li > a {
+  font-size: 1.5em;
+}
+
+/* Augmente la taille des textes dans les panneaux des onglets */
+.tab-pane {
+  font-size: 1.5em;
+}

@@ -7,6 +7,7 @@ CMJ_UI <- function(id) {
   tagList(
     fluidRow(
       column(width = 6, align = "center",
+             br(),
              h4("TEST CMJ"),
              fileInput(ns("xml_file"), "Uploader un fichier XML"),
              br(),
@@ -14,16 +15,32 @@ CMJ_UI <- function(id) {
              selectInput(ns("gender_select"), label = "Genre", choices = c("Homme", "Femme", "Non binaire")),
              actionButton(ns("submit_button"), label = "Soumettre")
       ),
-    ), 
+      column(width = 6, align = "center",
+             br(),
+             div(
+               style = "position:relative;padding-bottom:56.25%;height:0;overflow:hidden;",
+               tags$video(
+                 src = "reel_nour.mp4",
+                 type = "video/mp4",
+                 autoplay = TRUE,
+                 loop = TRUE,
+                 controls = FALSE,
+                 style = "position:absolute;top:0;left:0;width:100%;height:100%;"
+               )
+             )
+      )
+    ),
     fluidRow(
-      column(width = 12,
+      column(width = 6, align = "center",
              plotlyOutput(ns("bar_chart"))
+      ),
+      column(width = 6, align = "center",
+             htmlOutput(ns("results_text"))  # Modification ici
       )
     )
   )
 }
 
-# Server module
 # Server module
 CMJ_Server <- function(input, output, session) {
   ns <- session$ns
@@ -86,58 +103,96 @@ CMJ_Server <- function(input, output, session) {
 
   
   output$bar_chart <- renderPlotly({
-  req(input$xml_file, input$athlete_name, input$gender_select, isDataProcessed())
-  if (file.exists("results_globaux_CMJ.csv")) {
-    donnees <- read.csv("results_globaux_CMJ.csv")
-
-    # Vérifier si le dataframe n'est pas vide
-    if (!is.null(donnees) && nrow(donnees) > 0) {
+    req(input$xml_file, input$athlete_name, input$gender_select, isDataProcessed())
+    if (file.exists("results_globaux_CMJ.csv")) {
+      donnees <- read.csv("results_globaux_CMJ.csv")
       
-      hauteur_record <- max(donnees$Hauteur)
-      data_standeur <- donnees[nrow(donnees), ] # Utilisation directe des données de cmj_data()
-
-      largeur <- c(0.2, 0.2)
-      # Créer le graphique en barres empilées avec Plotly
-      fig <- plot_ly(donnees, x = ~Test, type = 'bar', width = largeur)
+      # Vérifier si le dataframe n'est pas vide
+      if (!is.null(donnees) && nrow(donnees) > 0) {
         
-      # Ajouter une trace pour la deuxième barre avec des valeurs de la deuxième colonne Hauteur
-      fig <- fig %>% add_trace(y = ~hauteur_record, name = 'Hauteur 2', marker = list(color = '#F9E9CA'), text = paste(round(hauteur_record, 2), "cm"))
+        hauteur_record <- max(donnees$Hauteur)
+        data_standeur <- donnees[nrow(donnees), ] # Utilisation directe des données de cmj_data()
         
-      # Ajouter une trace pour la première barre avec des valeurs de la première colonne Hauteur
-      fig <- fig %>% add_trace(y = ~data_standeur$Hauteur, name = 'Hauteur 1', marker = list(color = '#2C2F65'), text = paste(round(data_standeur$Hauteur, 2), "cm"))
+        largeur <- c(0.2, 0.2)
+        # Créer le graphique en barres empilées avec Plotly
+        fig <- plot_ly(donnees, x = ~Test, type = 'bar', width = largeur)
         
-      moyenne <- mean(donnees$Hauteur)
+        # Ajouter une trace pour la deuxième barre avec des valeurs de la deuxième colonne Hauteur
+        fig <- fig %>% add_trace(y = ~hauteur_record, name = 'Hauteur 2', marker = list(color = '#F9E9CA'), text = paste(round(hauteur_record, 2), "cm"))
         
-      # Définir le mode de barres empilées
-      fig <- fig %>% layout(yaxis = list(title = 'Hauteur'), barmode = 'overlay')
-      hline <- function(y = moyenne, color = "#C5243D") {
-        list(
-          type = "line",
-          x0 = 0,
-          x1 = 1,
-          xref = "paper",
-          y0 = moyenne,
-          y1 = moyenne,
-          line = list(color = color, dash = "dot")
+        # Ajouter une trace pour la première barre avec des valeurs de la première colonne Hauteur
+        fig <- fig %>% add_trace(y = ~data_standeur$Hauteur, name = 'Hauteur 1', marker = list(color = '#2C2F65'), text = paste(round(data_standeur$Hauteur, 2), "cm"))
+        
+        moyenne <- mean(donnees$Hauteur)
+        
+        # Définir le mode de barres empilées
+        fig <- fig %>% layout(yaxis = list(title = 'Hauteur'), barmode = 'overlay',
+                              margin = list(t = 50, b = 50))
+        
+        hline <- function(y = moyenne, color = "#C5243D") {
+          list(
+            type = "line",
+            x0 = 0,
+            x1 = 1,
+            xref = "paper",
+            y0 = moyenne,
+            y1 = moyenne,
+            line = list(color = color, dash = "dot")
+          )
+        }
+        
+        # Définir le mode de barres empilées
+        fig <- fig %>% layout(
+          shapes = list(hline(0.9)),
+          yaxis = list(title = 'Hauteur'),
+          barmode = 'overlay',
+          margin = list(t = 50, b = 50)
         )
+        
+        return(fig)
+      } else {
+        print("Le fichier CSV est vide.")
       }
-        
-      # Définir le mode de barres empilées
-      fig <- fig %>% layout(
-        shapes = list(hline(0.9)),
-        yaxis = list(title = 'Hauteur'),
-        barmode = 'overlay'
-      )
-        
-      return(fig)
     } else {
-      print("Le fichier CSV est vide.")
+      print("Le fichier CSV n'existe pas.")
     }
-  } else {
-    print("Le fichier CSV n'existe pas.")
-  }
-  isDataProcessed <- reactiveVal(NULL)
-  
+    # isDataProcessed <- reactiveVal(NULL)
+    
   })
+  
+  
+  output$results_text <- renderUI({  # Modification ici
+    req(input$xml_file, input$athlete_name, input$gender_select, isDataProcessed())
+    if (file.exists("results_globaux_CMJ.csv")) {
+      donnees <- read.csv("results_globaux_CMJ.csv")
+      
+      if (!is.null(donnees) && nrow(donnees) > 0) {
+        hauteur_record <- max(donnees$Hauteur)
+        data_standeur <- donnees[nrow(donnees), ]
+        moyenne <- mean(donnees$Hauteur)
+        
+        # Générer le texte des résultats
+        result_text <- tags$div(
+          tags$br(),
+          tags$strong(style="font-size:2.2em;","Résultats"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Hauteur record : "), tags$strong(style="font-size:2.2em;", round(hauteur_record, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Dernière hauteur : "), tags$strong(style="font-size:2.2em;", round(data_standeur$Hauteur, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Moyenne : "), tags$strong(style="font-size:2.2em;", round(moyenne, 2)), tags$strong(style="font-size:2.2em;"," cm")
+        )
+        
+        
+        # Retourner le texte des résultats
+        return(result_text)  # Modification ici
+        
+      } else {
+        return("Le fichier CSV est vide.")
+      }
+    } else {
+      return("Le fichier CSV n'existe pas.")
+    }
+  })
+  
+  
+  
 
 }
