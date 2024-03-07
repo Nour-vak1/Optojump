@@ -32,10 +32,10 @@ CMJ_UI <- function(id) {
     ),
     fluidRow(
       column(width = 6, align = "center",
-             plotlyOutput(ns("bar_chart"))
+             htmlOutput(ns("results_text"))  # Modification ici
       ),
       column(width = 6, align = "center",
-             htmlOutput(ns("results_text"))  # Modification ici
+             plotlyOutput(ns("bar_chart"))
       )
     )
   )
@@ -107,25 +107,24 @@ CMJ_Server <- function(input, output, session) {
     if (file.exists("results_globaux_CMJ.csv")) {
       donnees <- read.csv("results_globaux_CMJ.csv")
       
-      # Vérifier si le dataframe n'est pas vide
       if (!is.null(donnees) && nrow(donnees) > 0) {
         
         hauteur_record <- max(donnees$Hauteur)
-        data_standeur <- donnees[nrow(donnees), ] # Utilisation directe des données de cmj_data()
+        data_standeur <- donnees[nrow(donnees), ]
+        record_nour <- 59 # Valeur temporaire
         
-        largeur <- c(0.2, 0.2)
-        # Créer le graphique en barres empilées avec Plotly
+        largeur <- c(0.4, 0.4) # Augmentez la largeur des barres
+        
         fig <- plot_ly(donnees, x = ~Test, type = 'bar', width = largeur)
         
-        # Ajouter une trace pour la deuxième barre avec des valeurs de la deuxième colonne Hauteur
-        fig <- fig %>% add_trace(y = ~hauteur_record, name = 'Performance Record', marker = list(color = '#F9E9CA'), text = paste(round(hauteur_record, 2), "cm"))
+        fig <- fig %>% add_trace(y = ~record_nour, name = 'Record de Nour', marker = list(color = '#DCC283'), text = paste(round(record_nour, 2), "cm"), showlegend = FALSE)
         
-        # Ajouter une trace pour la première barre avec des valeurs de la première colonne Hauteur
-        fig <- fig %>% add_trace(y = ~data_standeur$Hauteur, name = 'Votre performance', marker = list(color = '#2C2F65'), text = paste(round(data_standeur$Hauteur, 2), "cm"))
+        fig <- fig %>% add_trace(y = ~hauteur_record, name = 'Record du salon', marker = list(color = '#C5243D'), text = paste(round(hauteur_record, 2), "cm"), showlegend = FALSE)
+        
+        fig <- fig %>% add_trace(y = ~data_standeur$Hauteur, name = 'Votre performance', marker = list(color = '#2C2F65'), text = paste(round(data_standeur$Hauteur, 2), "cm"), showlegend = FALSE)
         
         moyenne <- mean(donnees$Hauteur)
         
-        # Définir le mode de barres empilées
         fig <- fig %>% layout(yaxis = list(title = 'Hauteur'), barmode = 'overlay',
                               margin = list(t = 50, b = 50))
         
@@ -135,18 +134,35 @@ CMJ_Server <- function(input, output, session) {
             x0 = 0,
             x1 = 1,
             xref = "paper",
-            y0 = moyenne,
-            y1 = moyenne,
-            line = list(color = color, dash = "dot")
+            y0 = y,
+            y1 = y,
+            yref = "y",
+            line = list(color = color, dash = "dot", width = 2)
           )
         }
         
-        # Définir le mode de barres empilées
         fig <- fig %>% layout(
-          shapes = list(hline(0.9)),
+          shapes = list(
+            hline(record_nour, "#F9E9CA"),
+            hline(hauteur_record, "#C5243D"),
+            hline(data_standeur$Hauteur, "#2C2F65")
+          ),
           yaxis = list(title = 'Hauteur'),
           barmode = 'overlay',
-          margin = list(t = 50, b = 50)
+          margin = list(t = 50, b = 50),
+          showlegend = FALSE # Supprime la légende
+        )
+        
+        # Ajouter des légendes personnalisées au-dessus de chaque ligne
+        fig <- fig %>% add_annotations(
+          x = c(1, 1, 1),
+          y = c(record_nour + 1, hauteur_record + 1, data_standeur$Hauteur + 1), # Ajuste la position verticale des annotations
+          text = c("Record de Nour", "Performance Record", "Votre performance"),
+          showarrow = FALSE,
+          xanchor = "right",
+          yanchor = "bottom", # Ancre les annotations en bas
+          xshift = -20,
+          font = list(color = c("#F9E9CA", "#C5243D", "#2C2F65"))
         )
         
         return(fig)
@@ -156,9 +172,11 @@ CMJ_Server <- function(input, output, session) {
     } else {
       print("Le fichier CSV n'existe pas.")
     }
-    # isDataProcessed <- reactiveVal(NULL)
-    
   })
+  
+  
+  
+  
   
   
   output$results_text <- renderUI({  # Modification ici
@@ -175,8 +193,8 @@ CMJ_Server <- function(input, output, session) {
         result_text <- tags$div(
           tags$br(),
           tags$strong(style="font-size:2.2em;","Résultats"), tags$br(), tags$br(),
-          tags$span(style="font-size:2.2em;", "Hauteur record : "), tags$strong(style="font-size:2.2em;", round(hauteur_record, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
-          tags$span(style="font-size:2.2em;", "Dernière hauteur : "), tags$strong(style="font-size:2.2em;", round(data_standeur$Hauteur, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Hauteur record Nour : "), tags$strong(style="font-size:2.2em;", round(hauteur_record, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Hauteur visiteur : "), tags$strong(style="font-size:2.2em;", round(data_standeur$Hauteur, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
           tags$span(style="font-size:2.2em;", "Moyenne : "), tags$strong(style="font-size:2.2em;", round(moyenne, 2)), tags$strong(style="font-size:2.2em;"," cm")
         )
         
