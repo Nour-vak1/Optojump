@@ -67,15 +67,26 @@ CMJ_Server <- function(input, output, session) {
       result <- result[-1, ]
       result <- as.numeric(result)
       
-      # Imprimer la plus grande valeur
-      max_value <- max(result)
       
       Test = "CMJ"
       Nom <- input$athlete_name
       Sexe <- input$gender_select
       
-      # Création d'un dataframe avec les données
-      nouvelle_ligne <- data.frame(Test = Test, Nom = Nom, Hauteur = max_value, Sexe = Sexe, isAthlete = FALSE)
+      # Trier les valeurs de result en ordre décroissant
+      sorted_result <- sort(result, decreasing = TRUE)
+      
+      # Obtenir les 3 plus grandes valeurs si il y a 3 valeurs ou plus,
+      # les 2 plus grandes valeurs si il y a 2 valeurs,
+      # et la valeur maximale si il y a une seule valeur
+      top_values <- head(sorted_result, min(length(sorted_result), 3))
+      
+      # Créer un dataframe avec les données
+      nouvelle_ligne <- data.frame(Test = rep(Test, length(top_values)),
+                                   Nom = rep(Nom, length(top_values)),
+                                   Hauteur = top_values,
+                                   Sexe = rep(Sexe, length(top_values)),
+                                   isAthlete = rep(FALSE, length(top_values)))
+      
     }
     
     # Vérification si le fichier CSV existe
@@ -102,27 +113,72 @@ CMJ_Server <- function(input, output, session) {
       
       if (!is.null(donnees) && nrow(donnees) > 0) {
         hauteur_record <- max(donnees$Hauteur)
-        data_standeur <- donnees[nrow(donnees), ]
-        record_nour <- 59 # Valeur temporaire
+        
+        # Récupérer les données du visiteur en fonction du nombre de sauts effectués
+        data_standeur <- donnees[0, ] # Initialiser data_standeur à une ligne vide
+        current_name <- input$athlete_name # Nom de la personne actuelle
+        n <- nrow(donnees) # Nombre de lignes dans donnees
+        for (i in seq(n, 1, -1)) { # Parcourir les lignes de donnees en partant de la fin
+          if (donnees[i, "Nom"] == current_name) { # Si le nom de la personne est le même
+            data_standeur <- rbind(data_standeur, donnees[i, ]) # Ajouter la ligne à data_standeur
+          } else { # Si le nom de la personne est différent
+            break # Arrêter la boucle
+          }
+        }
+        
+        # Extraire les valeurs de la colonne Hauteur de data_standeur
+        hauteurs <- data_standeur$Hauteur
+        
+        # Obtenir les 3 plus grandes valeurs si il y a 3 valeurs ou plus,
+        # les 2 plus grandes valeurs si il y a 2 valeurs,
+        # et la valeur maximale si il y a une seule valeur
+        top_values <- head(sort(hauteurs, decreasing = TRUE), min(length(hauteurs), 3))
+        
+        record_nour <- subset(donnees, isAthlete == TRUE)$Hauteur
         
         fig <- plot_ly()
         
-        fig <- fig %>% add_trace(x = c("Record de Nour"), y = c(record_nour), name = 'Record de Nour', type = 'bar', marker = list(color = '#DCC283'))
-        fig <- fig %>% add_trace(x = c("Record du salon"), y = c(hauteur_record), name = 'Record du salon', type = 'bar', marker = list(color = '#C5243D'))
-        fig <- fig %>% add_trace(x = c("Votre performance"), y = c(data_standeur$Hauteur), name = 'Votre performance', type = 'bar', marker = list(color = '#2C2F65'))
+        fig <- fig %>% add_trace(x = c(1), y = c(record_nour), name = 'Record de Nour', type = 'bar', marker = list(color = '#DCC283', line = list(color = 'rgb(8,48,107)', width = 1.5)))
+        fig <- fig %>% add_trace(x = c(2), y = c(hauteur_record), name = 'Record du salon', type = 'bar', marker = list(color = '#C5243D', line = list(color = 'rgb(8,48,107)', width = 1.5)))
+        fig <- fig %>% add_trace(x = c(3), y = c(top_values[1]), name = 'Votre performance', type = 'bar', marker = list(color = '#2C2F65', line = list(color = 'rgb(8,48,107)', width = 1.5)))
+        
+        # Ajouter les lignes représentant les deux autres sauts du visiteur
+        if (length(top_values) > 1) {
+          fig <- fig %>% add_segments(x = c(3, 3),
+                                      y = c(top_values[2], top_values[2]),
+                                      xend = c(2.5, 3.5),
+                                      yend = c(top_values[2], top_values[2]),
+                                      line = list(color = "orange", width = 2, dash = "dash"),
+                                      name = paste('2ème saut : ', round(top_values[2], 2), "cm"),
+                                      showlegend = TRUE)
+        }
+        if (length(top_values) > 2) {
+          fig <- fig %>% add_segments(x = c(3, 3),
+                                      y = c(top_values[3], top_values[3]),
+                                      xend = c(2.5, 3.5),
+                                      yend = c(top_values[3], top_values[3]),
+                                      line = list(color = "green", width = 2, dash = "dash"),
+                                      name = paste('3ème saut : ', round(top_values[3], 2), "cm"),
+                                      showlegend = TRUE)
+        }
         
         # Ajouter le texte au milieu de chaque barre
-        fig <- fig %>% add_text(x = c("Record de Nour", "Record du salon", "Votre performance"),
-                                y = c(record_nour/2, hauteur_record/2, data_standeur$Hauteur/2), # Diviser par 2 pour centrer verticalement
-                                text = paste0(c(record_nour, hauteur_record, data_standeur$Hauteur), " cm"),
+        fig <- fig %>% add_text(x = c(1, 2, 3),
+                                y = c(record_nour/2, hauteur_record/2, top_values[1]/2), # Diviser par 2 pour centrer verticalement
+                                text = paste0(c(record_nour, hauteur_record, top_values[1]), " cm"),
                                 textposition = "auto", # Laisser plotly décider de l'alignement horizontal
                                 showlegend = FALSE,
                                 textfont = list(color = "white", size = 14))
         
-        fig <- fig %>% layout(yaxis = list(title = 'Hauteur'),
+        fig <- fig %>% layout(xaxis = list(type = 'linear', title = ''), # Convertir l'axe des x en axe continu
+                              yaxis = list(title = 'Hauteur'),
                               barmode = 'group', # Pour afficher les barres côte à côte
                               margin = list(t = 50, b = 50),
-                              showlegend = TRUE) # Afficher la légende
+                              showlegend = TRUE, # Afficher la légende
+                              legend = list(orientation = "h", yanchor = "bottom", y = -0.2, xanchor = "right", x = 1),
+                              bargap = 0.1, # Espace entre les groupes de barres
+                              bargroupgap = 0.1 # Espace entre les barres d'un même groupe
+        )
         
         return(fig)
       } else {
@@ -132,6 +188,8 @@ CMJ_Server <- function(input, output, session) {
       print("Le fichier CSV n'existe pas.")
     }
   })
+  
+  
   
   
   
