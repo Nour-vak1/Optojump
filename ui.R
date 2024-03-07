@@ -20,8 +20,8 @@ ui <- fluidPage(
   ),
   
   tabsetPanel(
-    tabPanel(tags$span("Tapping"), TappingUI("Tapping_module")),
     tabPanel(tags$span("CMJ"), CMJ_UI("CMJ_module")),
+    tabPanel(tags$span("Tapping"), TappingUI("Tapping_module")),
     id = "myTabsetPanel" # Add an id to the tabsetPanel for CSS targeting
   )
   

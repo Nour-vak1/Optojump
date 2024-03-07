@@ -118,10 +118,10 @@ CMJ_Server <- function(input, output, session) {
         fig <- plot_ly(donnees, x = ~Test, type = 'bar', width = largeur)
         
         # Ajouter une trace pour la deuxième barre avec des valeurs de la deuxième colonne Hauteur
-        fig <- fig %>% add_trace(y = ~hauteur_record, name = 'Hauteur 2', marker = list(color = '#F9E9CA'), text = paste(round(hauteur_record, 2), "cm"))
+        fig <- fig %>% add_trace(y = ~hauteur_record, name = 'Performance Record', marker = list(color = '#F9E9CA'), text = paste(round(hauteur_record, 2), "cm"))
         
         # Ajouter une trace pour la première barre avec des valeurs de la première colonne Hauteur
-        fig <- fig %>% add_trace(y = ~data_standeur$Hauteur, name = 'Hauteur 1', marker = list(color = '#2C2F65'), text = paste(round(data_standeur$Hauteur, 2), "cm"))
+        fig <- fig %>% add_trace(y = ~data_standeur$Hauteur, name = 'Votre performance', marker = list(color = '#2C2F65'), text = paste(round(data_standeur$Hauteur, 2), "cm"))
         
         moyenne <- mean(donnees$Hauteur)
         
