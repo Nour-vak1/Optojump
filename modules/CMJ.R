@@ -45,7 +45,7 @@ CMJ_UI <- function(id) {
 CMJ_Server <- function(input, output, session) {
   ns <- session$ns
   isDataProcessed <- reactiveVal(NULL)
-  
+  record_visiteur <- reactiveVal(NULL)
   observeEvent(input$submit_button, {
     req(input$xml_file, input$athlete_name, input$gender_select)
     
@@ -134,13 +134,15 @@ CMJ_Server <- function(input, output, session) {
         # et la valeur maximale si il y a une seule valeur
         top_values <- head(sort(hauteurs, decreasing = TRUE), min(length(hauteurs), 3))
         
+        record_visiteur(top_values[1])
+        
         record_nour <- subset(donnees, isAthlete == TRUE)$Hauteur
         
         fig <- plot_ly()
         
         fig <- fig %>% add_trace(x = c(1), y = c(record_nour), name = 'Record de Nour', type = 'bar', marker = list(color = '#DCC283', line = list(color = 'rgb(8,48,107)', width = 1.5)))
         fig <- fig %>% add_trace(x = c(2), y = c(hauteur_record), name = 'Record du salon', type = 'bar', marker = list(color = '#C5243D', line = list(color = 'rgb(8,48,107)', width = 1.5)))
-        fig <- fig %>% add_trace(x = c(3), y = c(top_values[1]), name = 'Votre performance', type = 'bar', marker = list(color = '#2C2F65', line = list(color = 'rgb(8,48,107)', width = 1.5)))
+        fig <- fig %>% add_trace(x = c(3), y = c(top_values[1]), name = paste('Votre record : ', round(top_values[1], 2), "cm"), type = 'bar', marker = list(color = '#2C2F65', line = list(color = 'rgb(8,48,107)', width = 1.5)))
         
         # Ajouter les lignes représentant les deux autres sauts du visiteur
         if (length(top_values) > 1) {
@@ -208,7 +210,7 @@ CMJ_Server <- function(input, output, session) {
           tags$br(),
           tags$strong(style="font-size:2.2em;","Résultats"), tags$br(), tags$br(),
           tags$span(style="font-size:2.2em;", "Hauteur record Nour : "), tags$strong(style="font-size:2.2em;", round(hauteur_record, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
-          tags$span(style="font-size:2.2em;", "Hauteur visiteur : "), tags$strong(style="font-size:2.2em;", round(data_standeur$Hauteur, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Hauteur visiteur : "), tags$strong(style="font-size:2.2em;", round(record_visiteur(), 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
           tags$span(style="font-size:2.2em;", "Moyenne du salon : "), tags$strong(style="font-size:2.2em;", round(moyenne, 2)), tags$strong(style="font-size:2.2em;"," cm")
         )
         
