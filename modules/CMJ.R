@@ -195,7 +195,9 @@ CMJ_Server <- function(input, output, session) {
             theme_minimal() +
             theme(plot.title = element_text(hjust = 0.5, color = "white"),  # Couleur du titre
                   plot.subtitle = element_text(hjust = 0.5, color = "white"),  # Couleur du sous-titre
-                  panel.border = element_blank(),  # Supprime l'encadré autour du graphique
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.border = element_blank(), # Supprime l'encadré autour du graphique
                   plot.background = element_rect(fill = "#2C2F65"),  # Fond du graphique en bleu
                   axis.text = element_text(color = "white"),  # Texte de l'axe en blanc
                   axis.title = element_text(color = "white"),  # Titre de l'axe en blanc
