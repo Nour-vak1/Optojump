@@ -1,5 +1,6 @@
 library(shiny)
 library(dplyr)
+library(plotly)
 
 # UI module
 CMJ_UI <- function(id) {
@@ -112,6 +113,7 @@ CMJ_Server <- function(input, output, session) {
       donnees <- read.csv("results_globaux_CMJ.csv")
       
       if (!is.null(donnees) && nrow(donnees) > 0) {
+        
         hauteur_record <- max(donnees$Hauteur)
         
         # Récupérer les données du visiteur en fonction du nombre de sauts effectués
@@ -126,60 +128,53 @@ CMJ_Server <- function(input, output, session) {
           }
         }
         
+        print("data_standeur")
+        print(data_standeur)
+        
         # Extraire les valeurs de la colonne Hauteur de data_standeur
         hauteurs <- data_standeur$Hauteur
         
-        # Obtenir les 3 plus grandes valeurs si il y a 3 valeurs ou plus,
-        # les 2 plus grandes valeurs si il y a 2 valeurs,
-        # et la valeur maximale si il y a une seule valeur
-        top_values <- head(sort(hauteurs, decreasing = TRUE), min(length(hauteurs), 3))
-        
-        record_visiteur(top_values[1])
-        
-        record_nour <- subset(donnees, isAthlete == TRUE)$Hauteur
+        record_visiteur(max(data_standeur$Hauteur))
         
         fig <- plot_ly()
         
-        fig <- fig %>% add_trace(x = c(1), y = c(record_nour), name = 'Record de Nour', type = 'bar', marker = list(color = '#DCC283', line = list(color = 'rgb(8,48,107)', width = 1.5)))
-        fig <- fig %>% add_trace(x = c(2), y = c(hauteur_record), name = 'Record du salon', type = 'bar', marker = list(color = '#C5243D', line = list(color = 'rgb(8,48,107)', width = 1.5)))
-        fig <- fig %>% add_trace(x = c(3), y = c(top_values[1]), name = paste('Votre record : ', round(top_values[1], 2), "cm"), type = 'bar', marker = list(color = '#2C2F65', line = list(color = 'rgb(8,48,107)', width = 1.5)))
+        # Créer un vecteur de couleurs pour chaque essai
+        colors <- c('#DCC283', '#C5243D', '#2C2F65')
         
-        # Ajouter les lignes représentant les deux autres sauts du visiteur
-        if (length(top_values) > 1) {
-          fig <- fig %>% add_segments(x = c(3, 3),
-                                      y = c(top_values[2], top_values[2]),
-                                      xend = c(2.5, 3.5),
-                                      yend = c(top_values[2], top_values[2]),
-                                      line = list(color = "orange", width = 2, dash = "dash"),
-                                      name = paste('2ème saut : ', round(top_values[2], 2), "cm"),
-                                      showlegend = TRUE)
-        }
-        if (length(top_values) > 2) {
-          fig <- fig %>% add_segments(x = c(3, 3),
-                                      y = c(top_values[3], top_values[3]),
-                                      xend = c(2.5, 3.5),
-                                      yend = c(top_values[3], top_values[3]),
-                                      line = list(color = "green", width = 2, dash = "dash"),
-                                      name = paste('3ème saut : ', round(top_values[3], 2), "cm"),
-                                      showlegend = TRUE)
+        # Ajouter les barres pour chaque essai du visiteur
+        for (i in 1:length(hauteurs)) {
+          fig <- fig %>% add_trace(x = c(i), y = c(hauteurs[i]), name = paste("Essai", i), type = 'bar', 
+                                   marker = list(color = colors[i], line = list(color = 'rgb(8,48,107)', width = 1.5)),
+                                   width = 0.5) %>% 
+          add_text(x = c(i), y = c(0.5*hauteurs[i]), text = round(hauteurs[i], 2), textposition = "auto", 
+                     textfont = list(color = "white", size = 14, family = "Arial", weight = "bold"), showlegend = FALSE) # Ajouter la valeur de la barre au centre de la barre en blanc et centré en hauteur
+        
         }
         
-        # Ajouter le texte au milieu de chaque barre
-        fig <- fig %>% add_text(x = c(1, 2, 3),
-                                y = c(record_nour/2, hauteur_record/2, top_values[1]/2), # Diviser par 2 pour centrer verticalement
-                                text = paste0(c(record_nour, hauteur_record, top_values[1]), " cm"),
-                                textposition = "auto", # Laisser plotly décider de l'alignement horizontal
-                                showlegend = FALSE,
-                                textfont = list(color = "white", size = 14))
+        # Supprimer les labels "trace 1", "trace 3", et "trace 5" dans la légende
+        fig <- fig %>% layout(
+          legend = list(orientation = "v", yanchor = "bottom", y = 0, xanchor = "right", x = 7),
+          showlegend = TRUE,
+          barmode = "group",
+          bargin = 0.05
+        )
         
-        fig <- fig %>% layout(xaxis = list(type = 'linear', title = ''), # Convertir l'axe des x en axe continu
-                              yaxis = list(title = 'Hauteur'),
-                              barmode = 'group', # Pour afficher les barres côte à côte
-                              margin = list(t = 50, b = 50),
-                              showlegend = TRUE, # Afficher la légende
-                              legend = list(orientation = "h", yanchor = "bottom", y = -0.2, xanchor = "right", x = 1),
-                              bargap = 0.1, # Espace entre les groupes de barres
-                              bargroupgap = 0.1 # Espace entre les barres d'un même groupe
+        
+        
+        # Ajouter les lignes pointillées pour le record de Nour, le record du salon et la moyenne
+        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(hauteur_record, hauteur_record), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(hauteur_record, hauteur_record), line = list(color = "orange", width = 2, dash = "dash"), name = 'Record du salon', showlegend = TRUE)
+        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(max(subset(donnees, isAthlete == TRUE)$Hauteur), max(subset(donnees, isAthlete == TRUE)$Hauteur)), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(max(subset(donnees, isAthlete == TRUE)$Hauteur), max(subset(donnees, isAthlete == TRUE)$Hauteur)), line = list(color = "green", width = 2, dash = "dash"), name = 'Record de Nour', showlegend = TRUE)
+        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(mean(donnees$Hauteur), mean(donnees$Hauteur)), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(mean(donnees$Hauteur), mean(donnees$Hauteur)), line = list(color = "blue", width = 2, dash = "dash"), name = 'Moyenne du salon', showlegend = TRUE)
+        
+        
+       
+        fig <- fig %>% layout(
+          xaxis = list(type = 'linear', title = ''), 
+          yaxis = list(title = 'Hauteur', tickmode = "linear", dtick = 5), # Utiliser une incrémentation de 5 sur l'axe des ordonnées
+          margin = list(t = 50, b = 50),
+          showlegend = TRUE,
+          legend = list(orientation = "v", yanchor = "bottom", y = 0, xanchor = "right", x = 7), # Déplacer la légende encore plus à droite
+          bargap = 0.05 # Réduire l'espace entre les barres
         )
         
         return(fig)
@@ -193,8 +188,6 @@ CMJ_Server <- function(input, output, session) {
   
   
   
-  
-  
   output$results_text <- renderUI({
     req(input$xml_file, input$athlete_name, input$gender_select, isDataProcessed())
     if (file.exists("results_globaux_CMJ.csv")) {
@@ -202,8 +195,9 @@ CMJ_Server <- function(input, output, session) {
       
       if (!is.null(donnees) && nrow(donnees) > 0) {
         hauteur_record <- max(donnees$Hauteur)
-        data_standeur <- donnees[nrow(donnees), ]
+        data_standeur <- record_visiteur()
         moyenne <- mean(donnees$Hauteur)
+        
         
         # Générer le texte des résultats
         result_text <- tags$div(
