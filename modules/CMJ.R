@@ -35,8 +35,9 @@ CMJ_UI <- function(id) {
       column(width = 6, align = "center",
              htmlOutput(ns("results_text"))  # Modification ici
       ),
-      column(width = 6, align = "center",
-             plotlyOutput(ns("bar_chart"))
+      column(width = 3, align = "right",
+             plotOutput(ns("bar_chart"))
+             
       )
     )
   )
@@ -47,6 +48,9 @@ CMJ_Server <- function(input, output, session) {
   ns <- session$ns
   isDataProcessed <- reactiveVal(NULL)
   record_visiteur <- reactiveVal(NULL)
+  deux_visiteur <- reactiveVal(NULL)
+  trois_visiteur <- reactiveVal(NULL)
+  
   observeEvent(input$submit_button, {
     req(input$xml_file, input$athlete_name, input$gender_select)
     
@@ -107,83 +111,125 @@ CMJ_Server <- function(input, output, session) {
     ##############################################
   })
   
-  output$bar_chart <- renderPlotly({
+  output$bar_chart <- renderPlot({
     req(input$xml_file, input$athlete_name, input$gender_select, isDataProcessed())
     if (file.exists("results_globaux_CMJ.csv")) {
       donnees <- read.csv("results_globaux_CMJ.csv")
       
       if (!is.null(donnees) && nrow(donnees) > 0) {
+        # Filtrer les données pour l'athlète actuel
+        athlete_data <- subset(donnees, Nom == input$athlete_name)
         
-        hauteur_record <- max(donnees$Hauteur)
-        
-        # Récupérer les données du visiteur en fonction du nombre de sauts effectués
-        data_standeur <- donnees[0, ] # Initialiser data_standeur à une ligne vide
-        current_name <- input$athlete_name # Nom de la personne actuelle
-        n <- nrow(donnees) # Nombre de lignes dans donnees
-        for (i in seq(n, 1, -1)) { # Parcourir les lignes de donnees en partant de la fin
-          if (donnees[i, "Nom"] == current_name) { # Si le nom de la personne est le même
-            data_standeur <- rbind(data_standeur, donnees[i, ]) # Ajouter la ligne à data_standeur
-          } else { # Si le nom de la personne est différent
-            break # Arrêter la boucle
+        if(nrow(athlete_data) > 0) {
+          # Trouver la meilleure performance de l'athlète
+
+          sorted_heights <- sort(athlete_data$Hauteur, decreasing = TRUE)
+          # Trouver la meilleure performance
+          record_visiteur(sorted_heights[1])
+          
+          # Si au moins deux performances sont disponibles
+          if (length(sorted_heights) >= 2) {
+            # Trouver la deuxième meilleure performance
+            deux_visiteur(sorted_heights[2])
           }
+          
+          # Si au moins trois performances sont disponibles
+          if (length(sorted_heights) >= 3) {
+            # Trouver la troisième meilleure performance
+            trois_visiteur(sorted_heights[3])
+          }
+          
+          
+          record_nour <- max(subset(donnees, isAthlete == TRUE)$Hauteur)
+          record_salon <- max(subset(donnees, isAthlete == FALSE)$Hauteur)
+
+          df_result_param <- data.frame(
+            labels = c("Record Nour", "Record Salon", "Votre record"),
+            valeur = c(record_nour, record_salon, record_visiteur())
+          )
+          
+          moyenne = mean(subset(donnees, isAthlete == FALSE)$Hauteur)
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          index <- order(df_result_param$valeur)
+          
+          # Réorganiser le dataframe en fonction de l'index
+          df_result_param <- df_result_param[index, ]
+          
+          
+          #Permet d'e trier d'affciher les valeurs dans l'ordre alphabetiques qui correspond à l'ordre décroissant des valeurs
+          rownames(df_result_param) <- c("C","B","A")
+          
+          labels_inside_bars <- df_result_param$valeur
+          
+          #Reformatage des valeurs pour le diagramme empilé
+          df_result_param$valeur[3] <- df_result_param$valeur[3] - df_result_param$valeur[2]
+          df_result_param$valeur[2] <- df_result_param$valeur[2] - df_result_param$valeur[1]
+          
+          df_result_param$Ordre <- rownames(df_result_param)
+          
+          # Définition des étiquettes de la légende
+          labels <- c(df_result_param$labels[3], df_result_param$labels[2], df_result_param$labels[1])
+          #Associé au label son dataframe
+          
+          # Ajout d'une colonne x à df_result_param
+          df_result_param$x <- 1
+          print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+          print(labels)
+          # Tracé du graphique
+          p <- ggplot(df_result_param, aes(fill = Ordre, y = valeur, x = x)) +
+            geom_bar(position = "stack", stat = "identity") +
+            geom_text(aes(label = labels_inside_bars), position = position_stack(vjust = 0.5), size = 3) +
+            labs(y = "Valeur",
+                 fill = "Résultats",  # Changement du nom de la légende
+                 title = "Résultats test CMJ",
+                 subtitle = "En centimètres") +
+            scale_fill_manual(values = c("A" = "#DCC283", "B" = "#67AF5E", "C" = "#81BFE0"),
+                              labels = labels) +  # Modification des étiquettes de la légende
+            scale_x_continuous(breaks = NULL) + # Suppression de l'échelle sur l'axe x
+            scale_y_continuous(breaks = seq(0, sum(df_result_param$valeur), by = 5)) + # Modifie l'axe des y
+            theme_minimal() +
+            theme(plot.title = element_text(hjust = 0.5),
+                  plot.subtitle = element_text(hjust = 0.5))
+          
+          # Ajout de la ligne de moyenne en pointillé si le paramètre moyenne est fourni
+          if (!is.null(moyenne)) {
+            p <- p + geom_hline(aes(yintercept = moyenne, linetype = "Moyenne"), size = 1) +
+              scale_linetype_manual(name = "Légende", values = "longdash", labels = "Moyenne",
+                                    guide = guide_legend(override.aes = list(fill = NA, color = "black")))
+          }
+          
+          
+          return(p)
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          # return(create_stacked_bar_plot(df_result_param, moy))
+          
+        } else {
+          print("Aucune donnée trouvée pour cet athlète.")
         }
-        
-        print("data_standeur")
-        print(data_standeur)
-        
-        # Extraire les valeurs de la colonne Hauteur de data_standeur
-        hauteurs <- data_standeur$Hauteur
-        
-        record_visiteur(max(data_standeur$Hauteur))
-        
-        fig <- plot_ly()
-        
-        # Créer un vecteur de couleurs pour chaque essai
-        colors <- c('#DCC283', '#C5243D', '#2C2F65')
-        
-        # Ajouter les barres pour chaque essai du visiteur
-        for (i in 1:length(hauteurs)) {
-          fig <- fig %>% add_trace(x = c(i), y = c(hauteurs[i]), name = paste("Essai", i), type = 'bar', 
-                                   marker = list(color = colors[i], line = list(color = 'rgb(8,48,107)', width = 1.5)),
-                                   width = 0.5) %>% 
-          add_text(x = c(i), y = c(0.5*hauteurs[i]), text = round(hauteurs[i], 2), textposition = "auto", 
-                     textfont = list(color = "white", size = 14, family = "Arial", weight = "bold"), showlegend = FALSE) # Ajouter la valeur de la barre au centre de la barre en blanc et centré en hauteur
-        
-        }
-        
-        # Supprimer les labels "trace 1", "trace 3", et "trace 5" dans la légende
-        fig <- fig %>% layout(
-          legend = list(orientation = "v", yanchor = "bottom", y = 0, xanchor = "right", x = 7),
-          showlegend = TRUE,
-          barmode = "group",
-          bargin = 0.05
-        )
-        
-        record_name <- paste("Record du salon : ", round(hauteur_record,2))
-        
-        nour_record <- max(subset(donnees, isAthlete == TRUE)$Hauteur)
-        nour_name <- paste("Record de Nour : ", round(nour_record,2))
-        
-        moyenne_score <- mean(donnees$Hauteur)
-        moyenne_name <- paste("Moyenne du salon : ", round(moyenne_score,2))
-        
-        # Ajouter les lignes pointillées pour le record de Nour, le record du salon et la moyenne
-        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(hauteur_record, hauteur_record), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(hauteur_record, hauteur_record), line = list(color = "orange", width = 2, dash = "dash"), name = record_name, showlegend = TRUE)
-        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(nour_record, nour_record), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(nour_record, nour_record), line = list(color = "green", width = 2, dash = "dash"), name = nour_name, showlegend = TRUE)
-        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(moyenne_score, moyenne_score), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(moyenne_score, moyenne_score), line = list(color = "blue", width = 2, dash = "dash"), name = moyenne_name, showlegend = TRUE)
-        
-        
-       
-        fig <- fig %>% layout(
-          xaxis = list(type = 'linear', title = ''), 
-          yaxis = list(title = 'Hauteur', tickmode = "linear", dtick = 5), # Utiliser une incrémentation de 5 sur l'axe des ordonnées
-          margin = list(t = 50, b = 50),
-          showlegend = TRUE,
-          legend = list(orientation = "v", yanchor = "bottom", y = 0, xanchor = "right", x = 7), # Déplacer la légende encore plus à droite
-          bargap = 0.05 # Réduire l'espace entre les barres
-        )
-        
-        return(fig)
       } else {
         print("Le fichier CSV est vide.")
       }
@@ -191,6 +237,7 @@ CMJ_Server <- function(input, output, session) {
       print("Le fichier CSV n'existe pas.")
     }
   })
+  
   
   
   
@@ -202,8 +249,8 @@ CMJ_Server <- function(input, output, session) {
       if (!is.null(donnees) && nrow(donnees) > 0) {
         hauteur_nour <- max(subset(donnees, isAthlete == TRUE)$Hauteur)
         data_standeur <- record_visiteur()
-        moyenne <- mean(donnees$Hauteur)
-        record_salon <- max(subset(donnees, isAthlete == FALSE)$Hauteur)
+        # moyenne <- mean(donnees$Hauteur)
+        # record_salon <- max(subset(donnees, isAthlete == FALSE)$Hauteur)
         
         
         
@@ -211,10 +258,15 @@ CMJ_Server <- function(input, output, session) {
         result_text <- tags$div(
           tags$br(),
           tags$strong(style="font-size:2.2em;","Résultats"), tags$br(), tags$br(),
-          tags$span(style="font-size:2.2em;", "Record Nour : "), tags$strong(style="font-size:2.2em;", round(hauteur_nour, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
           tags$span(style="font-size:2.2em;", "Votre record : "), tags$strong(style="font-size:2.2em;", round(record_visiteur(), 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
-          tags$span(style="font-size:2.2em;", "Record du salon : "), tags$strong(style="font-size:2.2em;", round(record_salon, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
-          tags$span(style="font-size:2.2em;", "Moyenne du salon : "), tags$strong(style="font-size:2.2em;", round(moyenne, 2)), tags$strong(style="font-size:2.2em;"," cm")
+          tags$br(),
+          tags$span(style="font-size:2.2em;", "Autres essais : "), 
+          tags$br(),
+          tags$strong(style="font-size:2.2em;", deux_visiteur()), tags$strong(style="font-size:2.2em;"," cm"), 
+          tags$br(), 
+          tags$strong(style="font-size:2.2em;", trois_visiteur()), tags$strong(style="font-size:2.2em;"," cm"), 
+          tags$br(), 
+          
         )
         
         return(result_text)
