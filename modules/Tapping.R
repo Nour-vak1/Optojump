@@ -33,9 +33,9 @@ TappingUI <- function(id) {
           "Décalage latéralX",
           "Largeur de pas"
         ),
-        selected = NULL
+        selected = "Temps de vol"
       ),
-      plotOutput(ns("results_plot")) # Ajouter un espace réservé pour le graphique
+      plotlyOutput(ns("results_plot")) # Ajouter un espace réservé pour le graphique
     )
     )
   )
@@ -47,6 +47,7 @@ TappingServer <- function(input, output, session) {
   ns <- session$ns
   
   Tapping_data <- reactiveVal(NULL)
+  isDataProcessed <- reactiveVal(NULL)
   
   observeEvent(input$submit_button,
                {
@@ -82,6 +83,30 @@ TappingServer <- function(input, output, session) {
                  print("test")
                  # Supprimer la première ligne car elle est maintenant utilisée comme noms de colonnes
                  result <- result[-1,]
+                 str(result)
+                 print(class(result))
+                 print(class(result[1]))
+                 
+                 result[,2] <- as.numeric(result[,2], na.rm = TRUE)
+                 print(1)
+                 result[,3] <- as.numeric(result[,3], na.rm = TRUE)
+                 print(2)
+                 result[,4] <- as.numeric(result[,4], na.rm = TRUE)
+                 print(3)
+                 result[,5] <- as.numeric(result[,5], na.rm = TRUE)
+                 print(4)
+                 result[,6] <- as.numeric(result[,6], na.rm = TRUE)
+                 print(5)
+              
+                 
+                 # Calculer la moyenne de chaque colonne
+                 col_means <- colMeans(result[,2:5], na.rm = TRUE)
+                 
+                 str(result)
+                 result[,2:5] <- lapply(result[,2:5], function(x) {
+                   x[is.na(x)] <- mean(x, na.rm = TRUE)
+                   return(x)
+                 })
                  
                  # Créer un nouveau data frame avec les nouvelles colonnes en positions 1, 2 et 3
                  # Imprimer la plus grande valeur
@@ -105,7 +130,9 @@ TappingServer <- function(input, output, session) {
                      isAthlete = FALSE
                    )
                  print("test")
+                 
                  # Vérification si le fichier CSV existe
+                 
                  if (!file.exists("results_globaux_Tapping.csv")) {
                    # Si le fichier n'existe pas, écrire le dataframe complet
                    write.csv(nouvelle_ligne, file = "results_globaux_Tapping.csv", row.names = FALSE)
@@ -130,7 +157,7 @@ TappingServer <- function(input, output, session) {
   observeEvent(input$column_select, {
     # Lire les données du fichier CSV
     results_globaux_Tapping <-
-      read.csv2("results_globaux_Tapping.csv", encoding = "latin1")
+      read.csv("results_globaux_Tapping.csv", encoding = "utf-8")
     showNotification(paste("Lecture dataframe ok"), type = "message")
     
     # Extraire la dernière ligne du fichier CSV
@@ -138,41 +165,52 @@ TappingServer <- function(input, output, session) {
     
     # Extraire la valeur de la colonne "Nom" de la dernière ligne
     last_name <- last_row$Nom
-    
+    print("RGT")
+    str(results_globaux_Tapping)
     # Vérifier quelle colonne a été sélectionnée
     selected_column <- input$column_select
     if (selected_column == "Temps de vol") {
       # Filtrer les données en fonction du temps de vol et de la valeur de la colonne "Nom" de la dernière ligne
-      #filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Temps de vol")]
+      filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Temps.de.vol")]
       
-      # Afficher les résultats filtrés dans le tableau
-      #filtered_results <- renderTable(#filtered_results)
+      # Afficher le graphique camembert
+      output$results_plot <- renderPlotly({
+        creer_camembert(filtered_results, "Temps.de.vol")
+      })
     } else if (selected_column == "Temps de contact") {
       # Filtrer les données en fonction du temps de contact et de la valeur de la colonne "Nom" de la dernière ligne
-      #filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Temps de contact")]
+      filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Temps.de.contact")]
       
-      # Afficher les résultats filtrés dans le tableau
-      #output$results_table <- renderTable(#filtered_results)
+      # Afficher le graphique camembert
+      output$results_plot <- renderPlotly({
+        creer_camembert(filtered_results, "Temps.de.contact")
+      })
     } else if (selected_column == "Point d'équilibreX") {
       # Filtrer les données en fonction du point d'équilibreX et de la valeur de la colonne "Nom" de la dernière ligne
-      #filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Point d'équilibreX")]
+      filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Point.d.équilibreX")]
       
-      # Afficher les résultats filtrés dans le tableau
-      #output$results_table <- renderTable(#filtered_results)
+      # Afficher le graphique camembert
+      output$results_plot <- renderPlotly({
+        creer_camembert(filtered_results, "Point.d.équilibreX")
+      })
     } else if (selected_column == "Décalage latéralX") {
       # Filtrer les données en fonction du décalage latéralX et de la valeur de la colonne "Nom" de la dernière ligne
-      #filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Décalage latéralX")]
+      filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Décalage.latéralX")]
       
-      # Afficher les résultats filtrés dans le tableau
-      #output$results_table <- renderTable(#filtered_results)
+      # Afficher le graphique camembert
+      output$results_plot <- renderPlotly({
+        creer_camembert(filtered_results, "Décalage.latéralX")
+      })
     } else if (selected_column == "Largeur de pas") {
       # Filtrer les données en fonction de la largeur de pas et de la valeur de la colonne "Nom" de la dernière ligne
-      #filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Largeur de pas")]
+      filtered_results <- results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Largeur.de.pas")]
       
-      # Afficher les résultats filtrés dans le tableau
-      #output$results_table <- renderTable(#filtered_results)
+      # Afficher le graphique camembert
+      output$results_plot <- renderPlotly({
+        creer_camembert(filtered_results, "Largeur.de.pas")})
     }
-  })
+    isDataProcessed <- reactiveVal(NULL)
+    })
   
   
   

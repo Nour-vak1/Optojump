@@ -507,8 +507,8 @@ creer_grapheline <- function(DF_gauche, DF_droit, indice_colonne) {
 
 creer_camembert <- function(DF, indice_de_colonne) {
   # Filtrer les données pour les lignes où la colonne "G/D" vaut "G" ou "D"
-  DF_gauche <- DF[DF$`G/D` == "G", ]
-  DF_droit <- DF[DF$`G/D` == "D", ]
+  DF_gauche <- DF[DF$`G.D` == "G", ]
+  DF_droit <- DF[DF$`G.D` == "D", ]
   
   # Calculer la moyenne pour chaque DataFrame
   moyenne_gauche <- mean(DF_gauche[, indice_de_colonne], na.rm = TRUE)
