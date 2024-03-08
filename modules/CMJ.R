@@ -159,12 +159,18 @@ CMJ_Server <- function(input, output, session) {
           bargin = 0.05
         )
         
+        record_name <- paste("Record du salon : ", round(hauteur_record,2))
         
+        nour_record <- max(subset(donnees, isAthlete == TRUE)$Hauteur)
+        nour_name <- paste("Record de Nour : ", round(nour_record,2))
+        
+        moyenne_score <- mean(donnees$Hauteur)
+        moyenne_name <- paste("Moyenne du salon : ", round(moyenne_score,2))
         
         # Ajouter les lignes pointillées pour le record de Nour, le record du salon et la moyenne
-        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(hauteur_record, hauteur_record), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(hauteur_record, hauteur_record), line = list(color = "orange", width = 2, dash = "dash"), name = 'Record du salon', showlegend = TRUE)
-        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(max(subset(donnees, isAthlete == TRUE)$Hauteur), max(subset(donnees, isAthlete == TRUE)$Hauteur)), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(max(subset(donnees, isAthlete == TRUE)$Hauteur), max(subset(donnees, isAthlete == TRUE)$Hauteur)), line = list(color = "green", width = 2, dash = "dash"), name = 'Record de Nour', showlegend = TRUE)
-        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(mean(donnees$Hauteur), mean(donnees$Hauteur)), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(mean(donnees$Hauteur), mean(donnees$Hauteur)), line = list(color = "blue", width = 2, dash = "dash"), name = 'Moyenne du salon', showlegend = TRUE)
+        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(hauteur_record, hauteur_record), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(hauteur_record, hauteur_record), line = list(color = "orange", width = 2, dash = "dash"), name = record_name, showlegend = TRUE)
+        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(nour_record, nour_record), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(nour_record, nour_record), line = list(color = "green", width = 2, dash = "dash"), name = nour_name, showlegend = TRUE)
+        fig <- fig %>% add_segments(x = c(0, length(hauteurs) + 1), y = c(moyenne_score, moyenne_score), xend = c(length(hauteurs) + 1, length(hauteurs) + 1), yend = c(moyenne_score, moyenne_score), line = list(color = "blue", width = 2, dash = "dash"), name = moyenne_name, showlegend = TRUE)
         
         
        
@@ -194,17 +200,20 @@ CMJ_Server <- function(input, output, session) {
       donnees <- read.csv("results_globaux_CMJ.csv")
       
       if (!is.null(donnees) && nrow(donnees) > 0) {
-        hauteur_record <- max(donnees$Hauteur)
+        hauteur_nour <- max(subset(donnees, isAthlete == TRUE)$Hauteur)
         data_standeur <- record_visiteur()
         moyenne <- mean(donnees$Hauteur)
+        record_salon <- max(subset(donnees, isAthlete == FALSE)$Hauteur)
+        
         
         
         # Générer le texte des résultats
         result_text <- tags$div(
           tags$br(),
           tags$strong(style="font-size:2.2em;","Résultats"), tags$br(), tags$br(),
-          tags$span(style="font-size:2.2em;", "Hauteur record Nour : "), tags$strong(style="font-size:2.2em;", round(hauteur_record, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
-          tags$span(style="font-size:2.2em;", "Hauteur visiteur : "), tags$strong(style="font-size:2.2em;", round(record_visiteur(), 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Record Nour : "), tags$strong(style="font-size:2.2em;", round(hauteur_nour, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Votre record : "), tags$strong(style="font-size:2.2em;", round(record_visiteur(), 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
+          tags$span(style="font-size:2.2em;", "Record du salon : "), tags$strong(style="font-size:2.2em;", round(record_salon, 2)), tags$strong(style="font-size:2.2em;"," cm"), tags$br(), tags$br(),
           tags$span(style="font-size:2.2em;", "Moyenne du salon : "), tags$strong(style="font-size:2.2em;", round(moyenne, 2)), tags$strong(style="font-size:2.2em;"," cm")
         )
         
