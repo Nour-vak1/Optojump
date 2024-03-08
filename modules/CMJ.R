@@ -6,6 +6,7 @@ library(plotly)
 CMJ_UI <- function(id) {
   ns <- NS(id)
   tagList(
+    tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")),
     fluidRow(
       column(width = 6, align = "center",
              br(),
@@ -35,13 +36,16 @@ CMJ_UI <- function(id) {
       column(width = 6, align = "center",
              htmlOutput(ns("results_text"))  # Modification ici
       ),
-      column(width = 3, align = "right",
-             plotOutput(ns("bar_chart"))
+      column(width = 6, align = "center",
+             plotOutput(ns("bar_chart"))  # Ajustement de la hauteur du graphique
              
       )
     )
   )
 }
+
+
+
 
 # Server module
 CMJ_Server <- function(input, output, session) {
@@ -151,17 +155,6 @@ CMJ_Server <- function(input, output, session) {
           moyenne = mean(subset(donnees, isAthlete == FALSE)$Hauteur)
           
           
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
           index <- order(df_result_param$valeur)
           
           # Réorganiser le dataframe en fonction de l'index
@@ -185,12 +178,12 @@ CMJ_Server <- function(input, output, session) {
           
           # Ajout d'une colonne x à df_result_param
           df_result_param$x <- 1
-          print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-          print(labels)
+          
+          texte_moyenne <- paste0("Moyenne salon :", round(moyenne,2))
           # Tracé du graphique
           p <- ggplot(df_result_param, aes(fill = Ordre, y = valeur, x = x)) +
             geom_bar(position = "stack", stat = "identity") +
-            geom_text(aes(label = labels_inside_bars), position = position_stack(vjust = 0.5), size = 3) +
+            geom_text(aes(label = labels_inside_bars), position = position_stack(vjust = 0.5), size = 5) +
             labs(y = "Valeur",
                  fill = "Résultats",  # Changement du nom de la légende
                  title = "Résultats test CMJ",
@@ -200,16 +193,23 @@ CMJ_Server <- function(input, output, session) {
             scale_x_continuous(breaks = NULL) + # Suppression de l'échelle sur l'axe x
             scale_y_continuous(breaks = seq(0, sum(df_result_param$valeur), by = 5)) + # Modifie l'axe des y
             theme_minimal() +
-            theme(plot.title = element_text(hjust = 0.5),
-                  plot.subtitle = element_text(hjust = 0.5))
+            theme(plot.title = element_text(hjust = 0.5, color = "white"),  # Couleur du titre
+                  plot.subtitle = element_text(hjust = 0.5, color = "white"),  # Couleur du sous-titre
+                  panel.border = element_blank(),  # Supprime l'encadré autour du graphique
+                  plot.background = element_rect(fill = "#2C2F65"),  # Fond du graphique en bleu
+                  axis.text = element_text(color = "white"),  # Texte de l'axe en blanc
+                  axis.title = element_text(color = "white"),  # Titre de l'axe en blanc
+                  legend.text = element_text(color = "white"),  # Texte de la légende en blanc
+                  legend.title = element_text(color = "white"))  # Titre de la légende en blanc
           
           # Ajout de la ligne de moyenne en pointillé si le paramètre moyenne est fourni
           if (!is.null(moyenne)) {
             p <- p + geom_hline(aes(yintercept = moyenne, linetype = "Moyenne"), size = 1) +
-              scale_linetype_manual(name = "Légende", values = "longdash", labels = "Moyenne",
+              scale_linetype_manual(name = "Légende", values = "longdash", labels = texte_moyenne,
                                     guide = guide_legend(override.aes = list(fill = NA, color = "black")))
           }
-          
+          p <- p + theme(text = element_text(size = 20))  # Réglez la taille de la police à votre choix
+          # p <- p + theme(plot.background = element_rect(fill = "#2C2F65"))
           
           return(p)
           
