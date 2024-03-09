@@ -36,8 +36,8 @@ CMJ_UI <- function(id) {
       column(width = 6, align = "center",
              htmlOutput(ns("results_text"))  # Modification ici
       ),
-      column(width = 6, align = "center",
-             plotOutput(ns("bar_chart"))  # Ajustement de la hauteur du graphique
+      column(width = 3, align = "center",
+             plotOutput(ns("bar_chart"), width = "100%")  # Ajustement de la hauteur du graphique
              
       )
     )
@@ -164,7 +164,15 @@ CMJ_Server <- function(input, output, session) {
           #Permet d'e trier d'affciher les valeurs dans l'ordre alphabetiques qui correspond à l'ordre décroissant des valeurs
           rownames(df_result_param) <- c("C","B","A")
           
-          labels_inside_bars <- df_result_param$valeur
+          
+          # Supprimer les doublons et convertir en caractères
+          labels_inside_bars <- as.character(unique(df_result_param$valeur))
+          
+          # Ajouter des "" jusqu'à ce que la taille soit égale à 3
+          while (length(labels_inside_bars) < 3) {
+            labels_inside_bars <- c(labels_inside_bars, "")
+          }
+          
           
           #Reformatage des valeurs pour le diagramme empilé
           df_result_param$valeur[3] <- df_result_param$valeur[3] - df_result_param$valeur[2]
@@ -182,7 +190,7 @@ CMJ_Server <- function(input, output, session) {
           texte_moyenne <- paste0("Moyenne salon :", round(moyenne,2))
           # Tracé du graphique
           p <- ggplot(df_result_param, aes(fill = Ordre, y = valeur, x = x)) +
-            geom_bar(position = "stack", stat = "identity") +
+            geom_bar(position = "stack", stat = "identity", width = 0.2) +
             geom_text(aes(label = labels_inside_bars), position = position_stack(vjust = 0.5), size = 5) +
             labs(y = "Valeur",
                  fill = "Résultats",  # Changement du nom de la légende
