@@ -3,6 +3,8 @@ library(stringr)
 library(dplyr)
 library(tidyr)
 library(tibble) 
+library(flexdashboard)
+library(plotly)
 
 parse_xml_file <- function(xml_file, columns_to_extract) {
   # Lire le fichier XML ligne par ligne
@@ -588,23 +590,138 @@ creer_camembert <- function(DF, indice_de_colonne) {
   return(camembert)
 }
 
-
-
-
-
-test_graphique <- function(athlete_data, index_max) {
-  # Vérifier si athlete_data contient les bonnes colonnes
-  print(names(athlete_data))
+creer_barplotgd <- function(DF, colonne_indice) {
+  DF_nettoyé <- na.omit(DF)
   
-  # Vérifier si index_max est correct
-  print(index_max)
+  moyenne_gauche <- mean(DF[DF$G.D == "G", colonne_indice], na.rm = TRUE)
+  moyenne_droit <- mean(DF[DF$G.D == "D", colonne_indice], na.rm = TRUE)
   
-  # Vérifier si les données pour le graphique sont correctement spécifiées
-  print(athlete_data$Nom)
-  print(athlete_data$Hauteur)
+  # Créer les étiquettes et les valeurs pour le graphique à barres
+  labels <- c("Gauche", "Droit")
+  valeurs <- c(moyenne_gauche, moyenne_droit)
+  textes <- paste(round(valeurs, 2), "Pas/seconde") # Ajouter du texte aux barres
   
-  # Vérifier les dimensions des données pour le graphique
-  print(dim(athlete_data))
+  # Créer le graphique à barres avec Plotly
+  barplot <- plot_ly(x = labels, y = valeurs, type = 'bar', text = textes, # Ajouter l'argument text
+                     marker = list(color = c('#C5243D', '#81BFE0'))) %>%
+    layout(title = "Fréquence de pas par pied",
+           xaxis = list(title = "Côté"),
+           yaxis = list(title = paste(colonne_indice, "pas / s")),
+           paper_bgcolor = '#2C2F65', plot_bgcolor = '#2C2F65',
+           font = list(color = 'white'))
+  
+  # Renvoyer la figure du graphique à barres
+  return(barplot)
+}
+
+# creer_barplot <- function(DF, colonne_indice) {
+#   # Supprimer les lignes contenant des valeurs manquantes
+#   DF_nettoyé <- na.omit(DF)
+#   
+#   # Obtenir le nom de la dernière ligne
+#   dernier_nom <- tail(DF_nettoyé$Nom, 1)
+#   
+#   # Filtrer le data frame pour n'inclure que les lignes ayant le même nom que la dernière ligne
+#   DF_filtré <- DF_nettoyé[DF_nettoyé$Nom == dernier_nom, ]
+#   
+#   # Calculer les moyennes pour chaque côté et la moyenne globale en fonction des noms identiques au dernier nom
+#   moyenne_gauche <- mean(DF_filtré[DF_filtré$G.D == "G", colonne_indice], na.rm = TRUE)
+#   moyenne_droit <- mean(DF_filtré[DF_filtré$G.D == "D", colonne_indice], na.rm = TRUE)
+#   moyenne_globale <- mean(DF_filtré[, colonne_indice], na.rm = TRUE)
+#   
+#   # Créer les étiquettes et les valeurs pour le graphique à barres
+#   labels <- c("Gauche", "Droit", "Moyenne globale")
+#   valeurs <- c(moyenne_gauche, moyenne_droit, moyenne_globale)
+#   textes <- paste(round(valeurs, 2), "Pas/seconde")
+#   
+#   # Créer le graphique à barres avec Plotly
+#   barplot <- plot_ly(x = labels, y = valeurs, type = 'bar', text = textes,
+#                      marker = list(color = c('#C5243D', '#81BFE0', 'black'))) %>%
+#     layout(title = paste("Fréquences moyennes"),
+#            xaxis = list(title = "Côté"),
+#            yaxis = list(title = paste(colonne_indice, "pas / s")),
+#            paper_bgcolor = '#FFFFFF', plot_bgcolor = '#FFFFFF',
+#            font = list(color = 'white'))
+#   
+#   # Renvoyer la figure du graphique à barres
+#   return(barplot)
+# }
+
+
+
+creer_barplot <- function(DF, colonne_indice) {
+  # Supprimer les lignes contenant des valeurs manquantes
+  DF_nettoyé <- na.omit(DF)
+  
+  # Obtenir le nom de la dernière ligne
+  dernier_nom <- tail(DF_nettoyé$Nom, 1)
+  
+  # Filtrer le data frame pour n'inclure que les lignes ayant le même nom que la dernière ligne
+  DF_filtré <- DF_nettoyé[DF_nettoyé$Nom == dernier_nom, ]
+  
+  # Calculer les moyennes pour chaque côté et la moyenne globale en fonction des noms identiques au dernier nom
+  moyenne_gauche <- mean(DF_filtré[DF_filtré$G.D == "G", colonne_indice], na.rm = TRUE)
+  moyenne_droit <- mean(DF_filtré[DF_filtré$G.D == "D", colonne_indice], na.rm = TRUE)
+  moyenne_globale <- mean(DF_filtré[, colonne_indice], na.rm = TRUE)
+  
+  # Créer les étiquettes et les valeurs pour le graphique à barres
+  labels <- c("Gauche", "Droit", "Moyenne globale")
+  valeurs <- c(moyenne_gauche, moyenne_droit, moyenne_globale)
+  textes <- paste(round(valeurs, 2), "Pas/seconde")
+  
+  # Mettre à jour le titre du graphique avec le nombre total de pas
+  titre <- paste("Nombre total de pas :", nrow(DF_filtré))
+  
+  # Créer le graphique à barres avec Plotly
+  barplot <- plot_ly(x = labels, y = valeurs, type = 'bar', text = textes,
+                     marker = list(color = c('#C5243D', '#81BFE0', 'black'))) %>%
+    layout(title = titre, # Mettre à jour le titre avec le nombre total de pas
+           xaxis = list(title = "Côté/Moyenne"),
+           yaxis = list(title = paste(colonne_indice, "pas / s")),
+           paper_bgcolor = '#2C2F65', plot_bgcolor = '#2C2F65',
+           font = list(color = 'white'))
+  
+  # Renvoyer la figure du graphique à barres
+  return(barplot)
 }
 
 
+
+creer_gauge_chart_plotly <- function(DF, colonne_indice) {
+  # Supprimer les lignes contenant des valeurs manquantes
+  DF_nettoyé <- na.omit(DF)
+  
+  # Obtenir le nom de la dernière ligne
+  dernier_nom <- tail(DF_nettoyé$Nom, 1)
+  
+  # Filtrer le data frame pour n'inclure que les lignes ayant le même nom que la dernière ligne
+  DF_filtré <- DF_nettoyé[DF_nettoyé$Nom == dernier_nom, ]
+  
+  # Calculer la moyenne
+  moyenne <- mean(DF_filtré[, colonne_indice], na.rm = TRUE)
+  
+  # Calculer la valeur maximale de la colonne
+  max_valeur <- max(DF_filtré[, colonne_indice], na.rm = TRUE)
+  
+  # Créer le gauge chart avec plotly
+  gauge <- plot_ly(
+    type = 'pie',
+    values = c(moyenne / max_valeur * 100, 100 - moyenne / max_valeur * 100),
+    labels = c("Valeur", ""),
+    hole = 0.5,
+    rotation = 90,
+    textposition = 'inside',
+    textinfo = 'label',
+    marker = list(colors = c('#C5243D', 'rgba(255, 255, 255, 0)'))
+  ) %>%
+    layout(
+      title = paste(colonne_indice, "pas / s"),
+      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+      paper_bgcolor = '#2C2F65', plot_bgcolor = '#2C2F65',
+      font = list(color = 'white')
+    )
+  
+  # Renvoyer le gauge chart
+  return(gauge)
+}
