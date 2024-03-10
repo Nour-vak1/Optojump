@@ -105,6 +105,19 @@ CMJ_Server <- function(input, output, session) {
     } else {
       # Si le fichier existe, lire les données actuelles
       donnees_existantes <- read.csv("results_globaux_CMJ.csv")
+      
+      # Vérifier si le nom de l'athlète existe déjà
+      if (Nom %in% donnees_existantes$Nom) {
+        # Trouver un nom unique en ajoutant un numéro
+        num_suffix <- 1
+        while (paste0(Nom, num_suffix) %in% donnees_existantes$Nom) {
+          num_suffix <- num_suffix + 1
+        }
+        Nom <- paste0(Nom, num_suffix)
+      }
+      
+      # Ajouter la nouvelle ligne avec le nom mis à jour
+      nouvelle_ligne$Nom <- Nom
       # Ajouter la nouvelle ligne aux données existantes
       donnees_combinees <- rbind(donnees_existantes, nouvelle_ligne)
       # Réécrire le fichier CSV avec toutes les données
@@ -223,18 +236,6 @@ CMJ_Server <- function(input, output, session) {
           
           return(p)
           
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
           # return(create_stacked_bar_plot(df_result_param, moy))
           
         } else {
@@ -276,6 +277,8 @@ CMJ_Server <- function(input, output, session) {
           tags$br(), 
           tags$strong(style="font-size:2.2em;", trois_visiteur()), tags$strong(style="font-size:2.2em;"," cm"), 
           tags$br(), 
+          tags$br(), 
+          
           
         )
         
