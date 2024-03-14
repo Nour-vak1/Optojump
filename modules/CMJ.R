@@ -135,11 +135,25 @@ CMJ_Server <- function(input, output, session) {
       
       if (!is.null(donnees) && nrow(donnees) > 0) {
         # Filtrer les données pour l'athlète actuel
-        athlete_data <- subset(donnees, Nom == input$athlete_name)
+        # athlete_data <- subset(donnees, Nom == input$athlete_name)
+        
+        n <- nrow(donnees) # Nombre de lignes dans donnees
+        last_name <- donnees[n, "Nom"]
+        print(last_name)
+        athlete_data <- NULL
+        for (i in seq(n, 1, -1)) { # Parcourir les lignes de donnees en partant de la fin
+          if (donnees[i, "Nom"] == last_name) { # Si le nom de la personne est le même
+            athlete_data <- rbind(athlete_data, donnees[i, ]) # Ajouter la ligne à data_standeur
+          } else { # Si le nom de la personne est différent
+            break # Arrêter la boucle
+          }
+        }
+        
+        print(athlete_data)
         
         if(nrow(athlete_data) > 0) {
           # Trouver la meilleure performance de l'athlète
-
+          
           sorted_heights <- sort(athlete_data$Hauteur, decreasing = TRUE)
           # Trouver la meilleure performance
           record_visiteur(sorted_heights[1])
@@ -156,10 +170,10 @@ CMJ_Server <- function(input, output, session) {
             trois_visiteur(sorted_heights[3])
           }
           
-          
+          if(donnees$Sexe == "Homme"){
           record_nour <- max(subset(donnees, isAthlete == TRUE)$Hauteur)
           record_salon <- max(subset(donnees, isAthlete == FALSE)$Hauteur)
-
+          
           df_result_param <- data.frame(
             labels = c("Record Nour", "Record Salon", "Votre record"),
             valeur = c(record_nour, record_salon, record_visiteur())
@@ -174,7 +188,7 @@ CMJ_Server <- function(input, output, session) {
           df_result_param <- df_result_param[index, ]
           
           
-          #Permet d'e trier d'affciher les valeurs dans l'ordre alphabetiques qui correspond à l'ordre décroissant des valeurs
+          #Permet de trier d'afficher les valeurs dans l'ordre alphabetiques qui correspond à l'ordre décroissant des valeurs
           rownames(df_result_param) <- c("C","B","A")
           
           
@@ -238,7 +252,93 @@ CMJ_Server <- function(input, output, session) {
           
           # return(create_stacked_bar_plot(df_result_param, moy))
           
-        } else {
+          
+          }
+          #Version femme 
+          else{
+            record_Elena <- max(subset(donnees, isAthlete == TRUE, Sexe == "Femme")$Hauteur)
+            record_salon <- max(subset(donnees, isAthlete == FALSE, Sexe == "Femme")$Hauteur)
+            
+            df_result_param <- data.frame(
+              labels = c("Record Elena", "Record Salon", "Votre record"),
+              valeur = c(record_Elena, record_salon, record_visiteur())
+            )
+            
+            moyenne = mean(subset(donnees, isAthlete == FALSE, Sexe == "Femme")$Hauteur)
+            
+            
+            index <- order(df_result_param$valeur)
+            
+            # Réorganiser le dataframe en fonction de l'index
+            df_result_param <- df_result_param[index, ]
+            
+            
+            #Permet de trier d'afficher les valeurs dans l'ordre alphabetiques qui correspond à l'ordre décroissant des valeurs
+            rownames(df_result_param) <- c("C","B","A")
+            
+            
+            # Supprimer les doublons et convertir en caractères
+            labels_inside_bars <- as.character(unique(df_result_param$valeur))
+            
+            # Ajouter des "" jusqu'à ce que la taille soit égale à 3
+            while (length(labels_inside_bars) < 3) {
+              labels_inside_bars <- c(labels_inside_bars, "")
+            }
+            
+            
+            #Reformatage des valeurs pour le diagramme empilé
+            df_result_param$valeur[3] <- df_result_param$valeur[3] - df_result_param$valeur[2]
+            df_result_param$valeur[2] <- df_result_param$valeur[2] - df_result_param$valeur[1]
+            
+            df_result_param$Ordre <- rownames(df_result_param)
+            
+            # Définition des étiquettes de la légende
+            labels <- c(df_result_param$labels[3], df_result_param$labels[2], df_result_param$labels[1])
+            #Associé au label son dataframe
+            
+            # Ajout d'une colonne x à df_result_param
+            df_result_param$x <- 1
+            
+            texte_moyenne <- paste0("Moyenne salon :", round(moyenne,2))
+            # Tracé du graphique
+            p <- ggplot(df_result_param, aes(fill = Ordre, y = valeur, x = x)) +
+              geom_bar(position = "stack", stat = "identity", width = 0.2) +
+              geom_text(aes(label = labels_inside_bars), position = position_stack(vjust = 0.5), size = 5) +
+              labs(y = "Valeur",
+                   fill = "Résultats",  # Changement du nom de la légende
+                   title = "Résultats test CMJ",
+                   subtitle = "En centimètres") +
+              scale_fill_manual(values = c("A" = "#DCC283", "B" = "#67AF5E", "C" = "#81BFE0"),
+                                labels = labels) +  # Modification des étiquettes de la légende
+              scale_x_continuous(breaks = NULL) + # Suppression de l'échelle sur l'axe x
+              scale_y_continuous(breaks = seq(0, sum(df_result_param$valeur), by = 5)) + # Modifie l'axe des y
+              theme_minimal() +
+              theme(plot.title = element_text(hjust = 0.5, color = "white"),  # Couleur du titre
+                    plot.subtitle = element_text(hjust = 0.5, color = "white"),  # Couleur du sous-titre
+                    panel.grid.major = element_blank(),
+                    panel.grid.minor = element_blank(),
+                    panel.border = element_blank(), # Supprime l'encadré autour du graphique
+                    plot.background = element_rect(fill = "#2C2F65"),  # Fond du graphique en bleu
+                    axis.text = element_text(color = "white"),  # Texte de l'axe en blanc
+                    axis.title = element_text(color = "white"),  # Titre de l'axe en blanc
+                    legend.text = element_text(color = "white"),  # Texte de la légende en blanc
+                    legend.title = element_text(color = "white"))  # Titre de la légende en blanc
+            
+            # Ajout de la ligne de moyenne en pointillé si le paramètre moyenne est fourni
+            if (!is.null(moyenne)) {
+              p <- p + geom_hline(aes(yintercept = moyenne, linetype = "Moyenne"), size = 1) +
+                scale_linetype_manual(name = "Légende", values = "longdash", labels = texte_moyenne,
+                                      guide = guide_legend(override.aes = list(fill = NA, color = "black")))
+            }
+            p <- p + theme(text = element_text(size = 20))  # Réglez la taille de la police à votre choix
+            # p <- p + theme(plot.background = element_rect(fill = "#2C2F65"))
+            
+            return(p)
+            
+            # return(create_stacked_bar_plot(df_result_param, moy))
+            
+          }
+          }else {
           print("Aucune donnée trouvée pour cet athlète.")
         }
       } else {
