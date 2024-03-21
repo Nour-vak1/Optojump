@@ -1096,3 +1096,30 @@ cone_plot <- function(df, col_x, col_y, col_z) {
   
   return(fig)
 }
+
+
+
+# Définir la fonction swarm_plot_colored
+swarm_plot_colored <- function(dataframe, nom, colonne) {
+  
+  # Regrouper les données par Nom et garder la valeur maximum de la colonne et le sexe
+  dataframe <- dataframe %>%
+    group_by(Nom, Sexe) %>%
+    summarise(across(all_of(colonne), max))
+  
+  # Créer une nouvelle colonne pour les couleurs
+  dataframe$couleur <- ifelse(dataframe$Sexe == "Homme", "#2C2F65", "#C5243D")
+  dataframe$couleur[dataframe$Nom == nom] <- "gold"
+  
+  # Arrondir les valeurs de hauteur à la première décimale
+  dataframe[[colonne]] <- round(dataframe[[colonne]], 1)
+  
+  # Créer le swarm plot avec ggplot
+  ggplot(dataframe, aes(x = Sexe, y = colonne, fill = couleur)) +
+    geom_jitter(alpha = 0.8, size = 3, color = dataframe$couleur, width = 0.2) +
+    geom_text(aes(label = colonne), color = dataframe$couleur, nudge_y = 0.5, size = 3) +
+    scale_fill_identity(guide = "none") +
+    scale_color_identity(guide = "none") +
+    labs(x = "Sexe", y = "Valeur de la colonne", title = "Swarm plot coloré") +
+    theme_minimal()
+}
