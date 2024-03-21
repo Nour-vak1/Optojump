@@ -5,7 +5,7 @@ formulaire <- read.csv(file = "Retours utilisateur/Expérience utilisateur MedIn
 
 # Supposons que df soit votre data frame et que vous vouliez changer les noms des colonnes
 
-nouveaux_noms <- c("Horodateur", "1", "2","3","4","5")
+nouveaux_noms <- c("Horodateur","1","2","3","4","5")
 
 # Assurez-vous que la longueur de nouveaux_noms correspond au nombre de colonnes dans df
 colnames(formulaire) <- nouveaux_noms
@@ -19,4 +19,4 @@ graphe_radar(formulaire,"1")
 graphe_radar(formulaire,"3")
 graphe_radar(formulaire,"4")
 
-tableau_interactif_textes(formulaire, "2")
+

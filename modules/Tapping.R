@@ -7,6 +7,8 @@ source("./Fonctions.R")
 TappingUI <- function(id) {
   ns <- NS(id)
   tagList(
+    tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")),
+    
     fluidRow(
       column(width = 6, align = "center",
              h2("Sélections"),
@@ -37,7 +39,7 @@ TappingUI <- function(id) {
             "Décalage latéralX",
             "Largeur de pas"
           ),
-          selected = "Temps de vol"
+          selected = "Fréquence de saut"
         ),
         plotlyOutput(ns("results_plot")) # Ajouter un espace réservé pour le graphique
       )
@@ -213,20 +215,16 @@ TappingServer <- function(input, output, session) {
                                                                             "Sexe",
                                                                             "G.D",
                                                                             "Rythme.p.s.")]
-      # colonne_indice = "Rythme.p.s."
-      # DF_gauche <- filtered_results[filtered_results$`G/D` == "G", ]
-      # DF_droit <- filtered_results[filtered_results$`G/D` == "D", ]
-      # moyenne_gauche <- mean(filtered_results[filtered_results$G.D == "G", "Rythme.p.s."], na.rm = TRUE)
-      # moyenne_droit <- mean(filtered_results[filtered_results$G.D == "D", "Rythme.p.s."], na.rm = TRUE)
-      # str(moyenne_droit)
-      # str(moyenne_gauche)
-      # print( "ggggggg")
+      head(filtered_results)
+
       
       # Afficher le graphique camembert
       output$results_plot <- renderPlotly({
-        
-        creer_barplot(filtered_results, "Rythme.p.s.")
+        # creer_barplot(filtered_results, "Rythme.p.s.")
+        plot_smooth_line_ggplot(filtered_results,"Rythme.p.s.")
       })
+      
+      
     }
     else if (selected_column == "Temps de vol") {
       # Filtrer les données en fonction du temps de vol et de la valeur de la colonne "Nom" de la dernière ligne
@@ -258,20 +256,36 @@ TappingServer <- function(input, output, session) {
     } else if (selected_column == "Décalage latéralX") {
       # Filtrer les données en fonction du décalage latéralX et de la valeur de la colonne "Nom" de la dernière ligne
       filtered_results <-
-        results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Décalage.latéralX")]
+        results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D","Rythme.p.s.", "Temps.de.vol","Temps.de.contact", "Décalage.latéralX")]
+      str(filtered_results)
+      
+      RthG <- mean(filtered_results %>% dplyr::filter(G.D == "G") %>% pull("Rythme.p.s."))
+      RthD <- mean(filtered_results %>% dplyr::filter(G.D == "D") %>% pull("Rythme.p.s."))
+      tcG <- mean(filtered_results %>% dplyr::filter(G.D == "G") %>% pull("Temps.de.vol"))
+      tcD <- mean(filtered_results %>% dplyr::filter(G.D == "D") %>% pull("Temps.de.vol"))
+      tvG <- mean(filtered_results %>% dplyr::filter(G.D == "G") %>% pull("Temps.de.contact"))
+      tvD <- mean(filtered_results %>% dplyr::filter(G.D == "D") %>% pull("Temps.de.contact"))
+      
+      str(RthD)
+      str(RthG)
+      str(tcG)
+      str(tcD)
+      str(tvG)
+      str(tvD)
+      
       
       # Afficher le graphique camembert
       output$results_plot <- renderPlotly({
-        creer_camembert(filtered_results, "Décalage.latéralX")
+        radar_chart(filtered_results,7,6,5,8)
       })
     } else if (selected_column == "Largeur de pas") {
       # Filtrer les données en fonction de la largeur de pas et de la valeur de la colonne "Nom" de la dernière ligne
       filtered_results <-
-        results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D", "Largeur.de.pas")]
+        results_globaux_Tapping[results_globaux_Tapping$Nom == last_name, c("Test", "Nom", "Sexe", "G.D","Rythme.p.s.", "Temps.de.vol","Temps.de.contact", "Décalage.latéralX")]
       
       # Afficher le graphique camembert
       output$results_plot <- renderPlotly({
-        creer_camembert(filtered_results, "Largeur.de.pas")
+        cone_plot(filtered_results, "Rythme.p.s.","Décalage.latéralX","Temps.de.contact")
       })
     }
     isDataProcessed <- reactiveVal(NULL)
