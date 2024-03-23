@@ -9,10 +9,13 @@ library(DT)
 library(ggplot2)
 library(gridExtra)
 
+library(ggrepel)
+
+
 parse_xml_file <- function(xml_file, columns_to_extract) {
   # Lire le fichier XML ligne par ligne
   xml_lines <- read_lines(xml_file)
-
+  
   # Initialiser une liste pour stocker les lignes entre les balises Row
   rows_list <- list()
   
@@ -77,15 +80,15 @@ parse_xml_file <- function(xml_file, columns_to_extract) {
   
   # Exemple d'utilisation de la fonction
   row_numbers <- find_row_numbers(columns_to_extract, filtered_rows_list)
-  print(row_numbers)
-  
   get_values_at_indexes <- function(index_list, rows_list_complete) {
     dataframe <- data.frame()
+    
     # Parcours de la liste de listes
+    
+    str(rows_list_complete)
     for (i in 2:length(rows_list_complete)) {
       # Initialisation du compteur
       compteur <- 0
-      
       # Parcours de chaque element de la liste de listes
       for (j in 1:length(rows_list_complete[[i]])) {
         # Verification si l'element contient "Data ss:Type"
@@ -150,6 +153,7 @@ parse_xml_file <- function(xml_file, columns_to_extract) {
   
   return(df_wide)
 }
+
 
 # # Exemple d'utilisation
 # xml_file <- "AK_Nour_Tapping.xml"
@@ -1099,27 +1103,113 @@ cone_plot <- function(df, col_x, col_y, col_z) {
 
 
 
-# Définir la fonction swarm_plot_colored
 swarm_plot_colored <- function(dataframe, nom, colonne) {
-  
+
   # Regrouper les données par Nom et garder la valeur maximum de la colonne et le sexe
   dataframe <- dataframe %>%
     group_by(Nom, Sexe) %>%
     summarise(across(all_of(colonne), max))
-  
+
   # Créer une nouvelle colonne pour les couleurs
-  dataframe$couleur <- ifelse(dataframe$Sexe == "Homme", "#2C2F65", "#C5243D")
-  dataframe$couleur[dataframe$Nom == nom] <- "gold"
-  
+  dataframe$couleur <- ifelse(dataframe$Sexe == "Homme", "Homme", "Femme")
+  dataframe$couleur[dataframe$Nom == nom] <- "Votre performance"
+
   # Arrondir les valeurs de hauteur à la première décimale
   dataframe[[colonne]] <- round(dataframe[[colonne]], 1)
-  
+
+  # Filtrer les valeurs où le Sexe est égal à "Femme"
+  filtre_femme <- dataframe[dataframe$Sexe == "Femme", ]
+  # Calculer la médiane de la colonne "Hauteur"
+  moy_hauteur_femme <- round(mean(filtre_femme$Hauteur), 1)
+
+  if(moy_hauteur_femme == "NaN") {
+    moy_hauteur_femme = 0
+  }
+  print(moy_hauteur_femme)
+
+  # Filtrer les valeurs où le Sexe est égal à "Homme"
+  filtre_homme <- dataframe[dataframe$Sexe == "Homme", ]
+  # Calculer la médiane de la colonne "Hauteur"
+  moy_hauteur_homme <- round(mean(filtre_homme$Hauteur), 1)
+
+  # Filtrer les données pour "Votre performance"
+  votre_performance <- dataframe[dataframe$couleur == "Votre performance", ]
+
+
   # Créer le swarm plot avec ggplot
-  ggplot(dataframe, aes(x = Sexe, y = colonne, fill = couleur)) +
-    geom_jitter(alpha = 0.8, size = 3, color = dataframe$couleur, width = 0.2) +
-    geom_text(aes(label = colonne), color = dataframe$couleur, nudge_y = 0.5, size = 3) +
-    scale_fill_identity(guide = "none") +
-    scale_color_identity(guide = "none") +
-    labs(x = "Sexe", y = "Valeur de la colonne", title = "Swarm plot coloré") +
-    theme_minimal()
+  p <- ggplot() +
+    geom_point(data = dataframe[dataframe$couleur != "Votre performance", ],
+               aes(x = Sexe, y = !!rlang::sym(colonne), fill = couleur, text = paste(colonne, ": ", round(!!rlang::sym(colonne), 1))),
+               alpha = 0.8, size = 3, shape = 21, color = "black", position = position_jitter(height = 0)) +
+    geom_point(data = votre_performance,
+               aes(x = Sexe, y = !!rlang::sym(colonne), fill = couleur, text = paste(colonne, ": ", round(!!rlang::sym(colonne), 1))),
+               size = 4, shape = 21, color = "black") +
+    scale_fill_manual(values = c("Homme" = "#2C2F65", "Femme" = "#C5243D", "Votre performance" = "gold"),
+                      labels = c("Homme" = "Hommes", "Femme" = "Femmes", "Votre performance" = "Votre performance")) +
+
+    geom_hline(aes(yintercept = moy_hauteur_femme, linetype = "Moyenne Femme", text = paste("Moyenne Femme: ", moy_hauteur_femme)),
+               color = "#C5243D") + # ajoute la ligne de médiane femme
+
+    geom_hline(aes(yintercept = moy_hauteur_homme, linetype = "Moyenne Homme", text = paste("Moyenne Homme: ", moy_hauteur_homme)),
+               color = "#2C2F65") + # ajoute la ligne de médiane homme
+
+    scale_linetype_manual(values = c("Moyenne Femme" = "dashed", "Moyenne Homme" = "dashed")) +
+
+
+    geom_text_repel(data = dataframe, aes(x = Sexe, y = !!rlang::sym(colonne), label = round(!!rlang::sym(colonne), 1)), vjust = -1.5) +  # Ajouter un texte interactif pour les points
+
+    labs(x = "Sexe", y = "Hauteur du saut", title = "Résultats sauts CMJ",
+         caption = "Survolez la ligne pour voir la hauteur") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+  # Convertir le graphique ggplot en plotly pour l'interactivité
+  p <- ggplotly(p, tooltip = c("text"))
+
+  # Modifier les étiquettes de la légende manuellement
+
+
+  for(i in seq_along(p$x$data)) {
+    print(p$x$data[[i]]$name)
+    if(p$x$data[[i]]$name == "(Homme,1)") {
+      p$x$data[[i]]$name <- "Score Hommes"
+    } else if(p$x$data[[i]]$name == "(Femme,1)") {
+      p$x$data[[i]]$name <- "Score Femmes"
+    } else if(p$x$data[[i]]$name == "(Votre performance,1)") {
+      p$x$data[[i]]$name <- "Votre performance"
+    } else if(p$x$data[[i]]$name == "(Moyenne Femme,1)") {
+      p$x$data[[i]]$name <- "Moyenne Femme"
+    } else if(p$x$data[[i]]$name == "(Moyenne Homme,1)") {
+      p$x$data[[i]]$name <- "Moyenne Homme"
+    }
+  }
+
+  # Appliquer la mise en page pour modifier le titre de la légende et centrer le titre du plot
+  p <- p %>%
+    layout(
+      legend = list(
+        title = list(
+          text = "<b>Légende</b>",
+          font = list(size = 14)
+        ),
+        y = 0.5,
+        yanchor = "middle"
+      ),
+      title = list(
+        text = "Résultats sauts CMJ",
+        x = 0.5,
+        xanchor = "center"
+      )
+    )
+
+
+  # Afficher le graphique
+  print(p)
 }
+
+
+# # Charger les données depuis le fichier CSV
+# data <- read.csv("./Tests/results_globaux_CMJ_medintech.csv")
+# 
+# # Utiliser la fonction swarm_plot_colored avec les données chargées
+# swarm_plot_colored(data, "Nour", "Hauteur")
