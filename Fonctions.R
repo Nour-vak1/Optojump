@@ -574,29 +574,69 @@ creer_grapheline <- function(DF_gauche, DF_droit, indice_colonne) {
 
 
 
-creer_camembert <- function(DF, indice_de_colonne) {
-  # Filtrer les donnees pour les lignes où la colonne "G/D" vaut "G" ou "D"
-  DF_gauche <- DF[DF$`G.D` == "G", ]
-  DF_droit <- DF[DF$`G.D` == "D", ]
+  creer_camembert <- function(DF, indice_de_colonne) {
+    # Filtrer les donnees pour les lignes où la colonne "G/D" vaut "G" ou "D"
+    DF_gauche <- DF[DF$`G.D` == "G", ]
+    DF_droit <- DF[DF$`G.D` == "D", ]
+    
+    # Calculer la moyenne pour chaque DataFrame
+    moyenne_gauche <- mean(DF_gauche[, indice_de_colonne], na.rm = TRUE)
+    moyenne_droit <- mean(DF_droit[, indice_de_colonne], na.rm = TRUE)
+    
+    # Creer les etiquettes et les valeurs pour le graphique camembert
+    labels <- c('Gauche', 'Droit')
+    valeurs <- c(moyenne_gauche, moyenne_droit)
+    
+    # Creer le graphique camembert avec Plotly
+    camembert <- plot_ly(labels = labels, values = valeurs, type = 'pie',
+                         text = paste("Côte: ", labels, "<br>", "Moyenne: ", round(valeurs, 2)),
+                         hoverinfo = "text", marker = list(colors = c('#C5243D', '#2C2F65'))) %>%
+      layout(title = "Moyenne des donnees gauche et droite", showlegend = FALSE, paper_bgcolor = '#FFFFFF', plot_bgcolor = '#FFFFFF',
+             font = list(color = 'white'))
+    
+    # Renvoyer la figure du graphique camembert
+    return(camembert)
+  }
   
-  # Calculer la moyenne pour chaque DataFrame
-  moyenne_gauche <- mean(DF_gauche[, indice_de_colonne], na.rm = TRUE)
-  moyenne_droit <- mean(DF_droit[, indice_de_colonne], na.rm = TRUE)
+  creer_gauge_chart <- function(DF, indice_de_colonne) {
+    
+    # Filtrer les donnees pour les lignes où la colonne "G/D" vaut "G" ou "D"
+    DF_gauche <- DF[DF$`G.D` == "G", ]
+    DF_droit <- DF[DF$`G.D` == "D", ]
+    
+    # Calculer la moyenne pour chaque DataFrame
+    moyenne_gauche <- mean(DF_gauche[, indice_de_colonne], na.rm = TRUE)
+    moyenne_droit <- mean(DF_droit[, indice_de_colonne], na.rm = TRUE)
+    
+    # Calculer les pourcentages pour chaque côté
+    pourcentage_gauche <- moyenne_gauche / (moyenne_gauche + moyenne_droit) * 100
+    pourcentage_droit <- moyenne_droit / (moyenne_gauche + moyenne_droit) * 100
+    
+    # Créer les valeurs pour le graphique gauge
+    valeurs <- list(
+      list(domain = list(x = c(0, 0.45), y = c(0, 1)), value = pourcentage_gauche, title = list(text = "Gauche")),
+      list(domain = list(x = c(0.55, 1), y = c(0, 1)), value = pourcentage_droit, title = list(text = "Droit"))
+    )
+    
+    # Créer le graphique gauge avec Plotly
+    gauge_chart <- plot_ly(type = "indicator", mode = "gauge+number",
+                           value = valeurs,
+                           gauge = list(axis = list(range = list(NULL, 100)),
+                                        bar = list(color = "#C5243D"),
+                                        steps = list(
+                                          list(range = c(0, 50), color = "#2C2F65"),
+                                          list(range = c(50, 100), color = "#C5243D")
+                                        )),
+                           number = list(font = list(color = "white")),
+                           domain = list(x = c(0, 1), y = c(0, 1))) %>%
+      layout(title = "Pourcentage des données gauche et droite",
+             paper_bgcolor = '#FFFFFF', plot_bgcolor = '#FFFFFF',
+             font = list(color = 'white'))
+    
+    # Renvoyer la figure du graphique gauge
+    return(gauge_chart)
+  }
   
-  # Creer les etiquettes et les valeurs pour le graphique camembert
-  labels <- c('Gauche', 'Droit')
-  valeurs <- c(moyenne_gauche, moyenne_droit)
-  
-  # Creer le graphique camembert avec Plotly
-  camembert <- plot_ly(labels = labels, values = valeurs, type = 'pie',
-                       text = paste("Côte: ", labels, "<br>", "Moyenne: ", round(valeurs, 2)),
-                       hoverinfo = "text", marker = list(colors = c('#C5243D', '#81BFE0'))) %>%
-    layout(title = "Moyenne des donnees gauche et droite", showlegend = FALSE, paper_bgcolor = '#2C2F65', plot_bgcolor = '#2C2F65',
-           font = list(color = 'white'))
-  
-  # Renvoyer la figure du graphique camembert
-  return(camembert)
-}
 
 creer_barplotgd <- function(DF, colonne_indice) {
   DF_nettoye <- na.omit(DF)
@@ -859,106 +899,50 @@ plot_line_chart <- function(df, col_name) {
   p
 }
 
-plot_smooth_line_ggplot <- function(df, col_name, line_color = "#C550AA", line_alpha = 0.2) {
-
-  # Vérifier si la colonne index existe dans le data frame
-  if (!"index" %in% colnames(df)) {
-    # Créer une colonne index à partir d'une séquence numérique
-    df$index <- 1:nrow(df)
-  }
-
-  # Calculer les valeurs minimale et maximale de la colonne
-  min_val <- min(df[, col_name])
-  max_val <- max(df[, col_name])
-  mean_val <- mean(df[, col_name])
-
-  # Convertir la couleur de la ligne en notation RGBA
-  line_color_rgba <- rgb(t(col2rgb(line_color) / 255), alpha = line_alpha)
-
-  # Créer un objet ggplot à partir du data frame
-  p <- ggplot(data = df, aes(x = index, y = !!rlang::sym(col_name))) +
-    geom_line(color = line_color_rgba) +
-    geom_smooth(se = FALSE, color = "#C5243D", linetype = "solid") +
-    # geom_hline(yintercept = min_val, linetype = "dashed", color = "#2C2F65", alpha = 0.5) +
-    # geom_hline(yintercept = max_val, linetype = "dashed", color = "#2C2F65", alpha = 0.5) +
-    geom_hline(yintercept = mean_val, linetype = "dotted", color = "black", alpha = 0.5) +
-    labs(title = paste("Evolution de", col_name),
-         x = "Index",
-         y = col_name) +
-    annotate("text", x = Inf, y = min_val, label = paste("Min :", round(min_val, 2)), hjust = 1.1, vjust = 0) +
-    annotate("text", x = Inf, y = max_val, label = paste("Max :", round(max_val, 2)), hjust = 1.1, vjust = 0) +
-    theme_void() + # Supprimer les éléments du thème par défaut
-    theme(
-      panel.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du panneau
-      plot.title = element_text(color = "white"), # Définir la couleur du titre du graphique
-      axis.title = element_text(color = "white"), # Définir la couleur des titres des axes
-      axis.text = element_text(color = "white"), # Définir la couleur des étiquettes des axes
-      axis.ticks = element_line(color = "white"), # Définir la couleur des traits des axes
-      plot.margin = unit(c(0, 0, 0, 0), "mm") # Supprimer les marges du graphique
-    )
-
-  # Renvoie le graphique
-  p
-}
-
-
-
-  # plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_alpha = 0.35) {
-  #   
-  #   # Vérifier si la colonne index existe dans le data frame
-  #   if (!"index" %in% colnames(df)) {
-  #     # Créer une colonne index à partir d'une séquence numérique
-  #     df$index <- 1:nrow(df)
-  #   }
-  #   
-  #   # Filtrer les donnees pour les lignes où la colonne "G/D" vaut "G" ou "D"
-  #   DF_gauche <- df[df$`G.D` == "G", ]
-  #   DF_droit <- df[df$`G.D` == "D", ]
-  #   
-  #   # Calculer la moyenne pour chaque DataFrame
-  #   moyenne_gauche <- mean(DF_gauche[, col_name], na.rm = TRUE)
-  #   moyenne_droit <- mean(DF_droit[, col_name], na.rm = TRUE)
-  #   
-  #   # Calculer les valeurs minimale et maximale de la colonne
-  #   min_val <- min(df[, col_name])
-  #   max_val <- max(df[, col_name])
-  #   mean_val <- mean(df[, col_name])
-  #   
-  #   # Convertir la couleur de la ligne en notation RGBA
-  #   line_color_rgba <- rgb(t(col2rgb(line_color) / 255), alpha = line_alpha)
-  #   
-  #   # Créer un objet ggplot à partir du data frame
-  #   p <- ggplot(data = df, aes(x = index, y = !!rlang::sym(col_name))) +
-  #     geom_line(aes(color = `G.D`), alpha = line_alpha) +
-  #     geom_smooth(aes(color = `G.D`), se = FALSE, linetype = "solid") +
-  #     geom_hline(yintercept = mean_val, linetype = "dotted", color = "#FF2c6c", alpha = 0.5) +
-  #     labs(title = paste("Evolution de", col_name),
-  #          x = "Index",
-  #          y = col_name,
-  #          color = "Evolution par pied") +
-  #     scale_color_manual(values = c("G" = "#FF00F0", "D" = "#00F7FF"),
-  #                        labels = c("Pied Gauche", "Pied Droit", "")) + # Mettre à jour les étiquettes ici
-  #     theme_void() + # Supprimer les éléments du thème par défaut
-  #     theme(
-  #       panel.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du panneau
-  #       plot.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du graphique
-  #       plot.title = element_text(color = "white"), # Définir la couleur du titre du graphique
-  #       axis.title = element_text(color = "white"), # Définir la couleur des titres des axes
-  #       axis.text = element_text(color = "white"), # Définir la couleur des étiquettes des axes
-  #       axis.ticks = element_line(color = "white"), # Définir la couleur des traits des axes
-  #       plot.margin = unit(c(0, 0, 0, 0), "mm"), # Supprimer les marges du graphique
-  #       legend.text = element_text(color = "white", size = 12),
-  #       legend.title = element_text(color = "white", size = 14),
-  #       legend.position = "top", # Déplacer la légende en haut du graphique
-  #       legend.box.background = element_rect(color = NA), # Supprimer la couleur de fond de la légende
-  #       legend.key = element_blank() # Supprimer les carrés de couleur dans la légende
-  #     )
-  #   
-  #   # Renvoie le graphique
-  #   p
-  # }
+# plot_smooth_line_ggplot <- function(df, col_name, line_color = "#C550AA", line_alpha = 0.2) {
 # 
-# plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_alpha = 0.35) {
+#   # Vérifier si la colonne index existe dans le data frame
+#   if (!"index" %in% colnames(df)) {
+#     # Créer une colonne index à partir d'une séquence numérique
+#     df$index <- 1:nrow(df)
+#   }
+# 
+#   # Calculer les valeurs minimale et maximale de la colonne
+#   min_val <- min(df[, col_name])
+#   max_val <- max(df[, col_name])
+#   mean_val <- mean(df[, col_name])
+# 
+#   # Convertir la couleur de la ligne en notation RGBA
+#   line_color_rgba <- rgb(t(col2rgb(line_color) / 255), alpha = line_alpha)
+# 
+#   # Créer un objet ggplot à partir du data frame
+#   p <- ggplot(data = df, aes(x = index, y = !!rlang::sym(col_name))) +
+#     geom_line(color = line_color_rgba) +
+#     geom_smooth(se = FALSE, color = "#C5243D", linetype = "solid") +
+#     # geom_hline(yintercept = min_val, linetype = "dashed", color = "#2C2F65", alpha = 0.5) +
+#     # geom_hline(yintercept = max_val, linetype = "dashed", color = "#2C2F65", alpha = 0.5) +
+#     geom_hline(yintercept = mean_val, linetype = "dotted", color = "black", alpha = 0.5) +
+#     labs(title = paste("Evolution de", col_name),
+#          x = "Index",
+#          y = col_name) +
+#     annotate("text", x = Inf, y = min_val, label = paste("Min :", round(min_val, 2)), hjust = 1.1, vjust = 0) +
+#     annotate("text", x = Inf, y = max_val, label = paste("Max :", round(max_val, 2)), hjust = 1.1, vjust = 0) +
+#     theme_void() + # Supprimer les éléments du thème par défaut
+#     theme(
+#       panel.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du panneau
+#       plot.title = element_text(color = "white"), # Définir la couleur du titre du graphique
+#       axis.title = element_text(color = "white"), # Définir la couleur des titres des axes
+#       axis.text = element_text(color = "white"), # Définir la couleur des étiquettes des axes
+#       axis.ticks = element_line(color = "white"), # Définir la couleur des traits des axes
+#       plot.margin = unit(c(0, 0, 0, 0), "mm") # Supprimer les marges du graphique
+#     )
+# 
+#   # Renvoie le graphique
+#   p
+# }
+
+# 
+# plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_alpha = 0.1) {
 #   
 #   # Vérifier si la colonne index existe dans le data frame
 #   if (!"index" %in% colnames(df)) {
@@ -984,13 +968,15 @@ plot_smooth_line_ggplot <- function(df, col_name, line_color = "#C550AA", line_a
 #   
 #   # Créer un objet ggplot à partir du data frame
 #   p <- ggplot(data = df, aes(x = index, y = !!rlang::sym(col_name))) +
-#     geom_line(aes(color = `G.D`, group = `G.D`), alpha = line_alpha) +
-#     geom_smooth(aes(color = `G.D`, group = `G.D`), se = FALSE, linetype = "solid") +
-#     geom_hline(yintercept = mean_val, linetype = "dotted", color = "#FF2c6c", alpha = 0.5) +
-#     scale_color_manual(values = c("G" = "#FF00F0", "D" = "#00F7FF")) +
+#     geom_line(aes(color = `G.D`), alpha = line_alpha) +
+#     geom_smooth(aes(color = `G.D`), se = FALSE, linetype = "solid") +
+#     geom_hline(aes(yintercept = mean_val, color = "Mean"), linetype = "dotted", show.legend = TRUE) +
+#     scale_color_manual(values = c("G" = "#FF00F0", "D" = "#00F7FF", "Mean" = "#FF2c6c"),
+#                        labels = c("Pied Gauche", "Pied Droit", "Moyenne")) +
 #     labs(title = paste("Evolution de", col_name),
 #          x = "Index",
-#          y = col_name) +
+#          y = col_name,
+#          color = "Evolution par pied") +
 #     theme_void() + # Supprimer les éléments du thème par défaut
 #     theme(
 #       panel.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du panneau
@@ -1000,13 +986,17 @@ plot_smooth_line_ggplot <- function(df, col_name, line_color = "#C550AA", line_a
 #       axis.text = element_text(color = "white"), # Définir la couleur des étiquettes des axes
 #       axis.ticks = element_line(color = "white"), # Définir la couleur des traits des axes
 #       plot.margin = unit(c(0, 0, 0, 0), "mm"), # Supprimer les marges du graphique
-#       legend.position = "none" # Supprimer la légende
+#       legend.text = element_text(color = "white", size = 14),
+#       legend.title = element_text(color = "white", size = 16),
+#       legend.position = "top", # Déplacer la légende en haut du graphique
+#       legend.box.background = element_rect(color = NA), # Supprimer la couleur de fond de la légende
+#       legend.key = element_blank() # Supprimer les carrés de couleur dans la légende
 #     )
 #   
 #   # Renvoie le graphique
 #   p
 # }
-# 
+
 
 plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_alpha = 0.1) {
   
@@ -1034,26 +1024,26 @@ plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_a
   
   # Créer un objet ggplot à partir du data frame
   p <- ggplot(data = df, aes(x = index, y = !!rlang::sym(col_name))) +
-    geom_line(aes(color = `G.D`), alpha = line_alpha) +
-    geom_smooth(aes(color = `G.D`), se = FALSE, linetype = "solid") +
+    geom_smooth(data = DF_gauche, aes(color = "G"), se = FALSE, linetype = "solid") +
+    geom_smooth(data = DF_droit, aes(color = "D"), se = FALSE, linetype = "solid") +
     geom_hline(aes(yintercept = mean_val, color = "Mean"), linetype = "dotted", show.legend = TRUE) +
-    scale_color_manual(values = c("G" = "#FF00F0", "D" = "#00F7FF", "Mean" = "#FF2c6c"),
+    scale_color_manual(values = c("G" = "#C5243D", "D" = "#2C2F65", "Mean" = "#FF2c6c"),
                        labels = c("Pied Gauche", "Pied Droit", "Moyenne")) +
-    labs(title = paste("Evolution de", col_name),
-         x = "Index",
-         y = col_name,
+    labs(title = paste("Evolution de la fréquence de pas"),
+         x = "Nombre de pas",
+         y = "Fréquence en pas/secondes",
          color = "Evolution par pied") +
     theme_void() + # Supprimer les éléments du thème par défaut
     theme(
-      panel.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du panneau
-      plot.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du graphique
-      plot.title = element_text(color = "white"), # Définir la couleur du titre du graphique
-      axis.title = element_text(color = "white"), # Définir la couleur des titres des axes
-      axis.text = element_text(color = "white"), # Définir la couleur des étiquettes des axes
-      axis.ticks = element_line(color = "white"), # Définir la couleur des traits des axes
+      panel.background = element_rect(fill = "#FFFFFF", color = NA), # Définir la couleur de fond du panneau
+      plot.background = element_rect(fill = "#FFFFFF", color = NA), # Définir la couleur de fond du graphique
+      plot.title = element_text(color = "black"), # Définir la couleur du titre du graphique
+      axis.title = element_text(color = "black"), # Définir la couleur des titres des axes
+      axis.text = element_text(color = "black"), # Définir la couleur des étiquettes des axes
+      axis.ticks = element_line(color = "black"), # Définir la couleur des traits des axes
       plot.margin = unit(c(0, 0, 0, 0), "mm"), # Supprimer les marges du graphique
-      legend.text = element_text(color = "white", size = 14),
-      legend.title = element_text(color = "white", size = 16),
+      legend.text = element_text(color = "black", size = 14),
+      legend.title = element_text(color = "black", size = 16),
       legend.position = "top", # Déplacer la légende en haut du graphique
       legend.box.background = element_rect(color = NA), # Supprimer la couleur de fond de la légende
       legend.key = element_blank() # Supprimer les carrés de couleur dans la légende
@@ -1062,6 +1052,31 @@ plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_a
   # Renvoie le graphique
   p
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 cone_plot <- function(df, col_x, col_y, col_z) {
   
@@ -1208,8 +1223,31 @@ swarm_plot_colored <- function(dataframe, nom, colonne) {
 }
 
 
-# # Charger les données depuis le fichier CSV
-# data <- read.csv("./Tests/results_globaux_CMJ_medintech.csv")
-# 
-# # Utiliser la fonction swarm_plot_colored avec les données chargées
-# swarm_plot_colored(data, "Nour", "Hauteur")
+library(plotly)
+
+plot_column_evolution <- function(df, column_name) {
+  # Ajouter une colonne index au dataframe
+  df <- df %>% mutate(index = 1:n())
+  # Diviser le dataframe en deux sous-ensembles
+  df_gauche <- df[df$G.D == "G", ]
+  df_droit <- df[df$G.D == "D", ]
+  
+  # Créer une liste de courbes pour chaque sous-ensemble
+  plots <- list(
+    # Courbe pour le sous-ensemble gauche
+    plot_ly(df_gauche, x = ~index, y = column_name, type = "scatter", mode = "lines",
+            name = "Sous-ensemble gauche", line = list(color = "blue")),
+    # Courbe pour le sous-ensemble droit
+    plot_ly(df_droit, x = ~index, y = column_name, type = "scatter", mode = "lines",
+            name = "Sous-ensemble droit", line = list(color = "red"))
+  )
+  
+  # Ajouter les courbes au graphique
+  plot <- subplot(plots, nrows = 2, shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>%
+    layout(title = "Évolution de la colonne",
+           xaxis = list(title = "Index"),
+           yaxis = list(title = column_name))
+  
+  # Retourner le graphique
+  return(plot)
+}

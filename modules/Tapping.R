@@ -221,7 +221,7 @@ TappingServer <- function(input, output, session) {
       # Afficher le graphique camembert
       output$results_plot <- renderPlotly({
         # creer_barplot(filtered_results, "Rythme.p.s.")
-        plot_smooth_line_ggplot(filtered_results,"Rythme.p.s.")
+        plot_smooth_line_ggplot (filtered_results,"Rythme.p.s.")
       })
       
       
