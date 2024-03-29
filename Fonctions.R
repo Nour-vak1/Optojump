@@ -590,7 +590,7 @@ creer_grapheline <- function(DF_gauche, DF_droit, indice_colonne) {
     # Creer le graphique camembert avec Plotly
     camembert <- plot_ly(labels = labels, values = valeurs, type = 'pie',
                          text = paste("Côte: ", labels, "<br>", "Moyenne: ", round(valeurs, 2)),
-                         hoverinfo = "text", marker = list(colors = c('#C5243D', '#2C2F65'))) %>%
+                         hoverinfo = "text", marker = list(colors = c('#FF00F0', '#00F7FF'))) %>%
       layout(title = "Moyenne des donnees gauche et droite", showlegend = FALSE, paper_bgcolor = '#FFFFFF', plot_bgcolor = '#FFFFFF',
              font = list(color = 'white'))
     
@@ -941,6 +941,62 @@ plot_line_chart <- function(df, col_name) {
 #   p
 # }
 
+
+plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_alpha = 0.1) {
+
+  # Vérifier si la colonne index existe dans le data frame
+  if (!"index" %in% colnames(df)) {
+    # Créer une colonne index à partir d'une séquence numérique
+    df$index <- 1:nrow(df)
+  }
+
+  # Filtrer les donnees pour les lignes où la colonne "G/D" vaut "G" ou "D"
+  DF_gauche <- df[df$`G.D` == "G", ]
+  DF_droit <- df[df$`G.D` == "D", ]
+
+  # Calculer la moyenne pour chaque DataFrame
+  moyenne_gauche <- mean(DF_gauche[, col_name], na.rm = TRUE)
+  moyenne_droit <- mean(DF_droit[, col_name], na.rm = TRUE)
+
+  # Calculer les valeurs minimale et maximale de la colonne
+  min_val <- min(df[, col_name])
+  max_val <- max(df[, col_name])
+  mean_val <- mean(df[, col_name])
+
+  # Convertir la couleur de la ligne en notation RGBA
+  line_color_rgba <- rgb(t(col2rgb(line_color) / 255), alpha = line_alpha)
+
+  # Créer un objet ggplot à partir du data frame
+  p <- ggplot(data = df, aes(x = index, y = !!rlang::sym(col_name))) +
+    geom_line(aes(color = `G.D`), alpha = line_alpha) +
+    geom_smooth(aes(color = `G.D`), se = FALSE, linetype = "solid") +
+    geom_hline(aes(yintercept = mean_val, color = "Mean"), linetype = "dotted", show.legend = TRUE) +
+    scale_color_manual(values = c("G" = "#FF00F0", "D" = "#00F7FF", "Mean" = "#FF2c6c"),
+                       labels = c("Pied Gauche", "Pied Droit", "Moyenne")) +
+    labs(title = paste("Evolution de", col_name),
+         x = "Index",
+         y = col_name,
+         color = "Evolution par pied") +
+    theme_void() + # Supprimer les éléments du thème par défaut
+    theme(
+      panel.background = element_rect(fill = "#FFFFFF", color = NA), # Définir la couleur de fond du panneau
+      plot.background = element_rect(fill = "#FFFFFF", color = NA), # Définir la couleur de fond du graphique
+      plot.title = element_text(color = "white"), # Définir la couleur du titre du graphique
+      axis.title = element_text(color = "white"), # Définir la couleur des titres des axes
+      axis.text = element_text(color = "white"), # Définir la couleur des étiquettes des axes
+      axis.ticks = element_line(color = "white"), # Définir la couleur des traits des axes
+      plot.margin = unit(c(0, 0, 0, 0), "mm"), # Supprimer les marges du graphique
+      legend.text = element_text(color = "white", size = 14),
+      legend.title = element_text(color = "white", size = 16),
+      legend.position = "top", # Déplacer la légende en haut du graphique
+      legend.box.background = element_rect(color = NA), # Supprimer la couleur de fond de la légende
+      legend.key = element_blank() # Supprimer les carrés de couleur dans la légende
+    )
+
+  # Renvoie le graphique
+  p
+}
+
 # 
 # plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_alpha = 0.1) {
 #   
@@ -968,90 +1024,34 @@ plot_line_chart <- function(df, col_name) {
 #   
 #   # Créer un objet ggplot à partir du data frame
 #   p <- ggplot(data = df, aes(x = index, y = !!rlang::sym(col_name))) +
-#     geom_line(aes(color = `G.D`), alpha = line_alpha) +
-#     geom_smooth(aes(color = `G.D`), se = FALSE, linetype = "solid") +
+#     geom_smooth(data = DF_gauche, aes(color = "G"), se = FALSE, linetype = "solid") +
+#     geom_smooth(data = DF_droit, aes(color = "D"), se = FALSE, linetype = "solid") +
 #     geom_hline(aes(yintercept = mean_val, color = "Mean"), linetype = "dotted", show.legend = TRUE) +
-#     scale_color_manual(values = c("G" = "#FF00F0", "D" = "#00F7FF", "Mean" = "#FF2c6c"),
+#     scale_color_manual(values = c("G" = "#C5243D", "D" = "#2C2F65", "Mean" = "#FF2c6c"),
 #                        labels = c("Pied Gauche", "Pied Droit", "Moyenne")) +
-#     labs(title = paste("Evolution de", col_name),
-#          x = "Index",
-#          y = col_name,
+#     labs(title = paste("Evolution de la fréquence de pas"),
+#          x = "Nombre de pas",
+#          y = "Fréquence en pas/secondes",
 #          color = "Evolution par pied") +
 #     theme_void() + # Supprimer les éléments du thème par défaut
 #     theme(
-#       panel.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du panneau
-#       plot.background = element_rect(fill = "#2C2F65", color = NA), # Définir la couleur de fond du graphique
-#       plot.title = element_text(color = "white"), # Définir la couleur du titre du graphique
-#       axis.title = element_text(color = "white"), # Définir la couleur des titres des axes
-#       axis.text = element_text(color = "white"), # Définir la couleur des étiquettes des axes
-#       axis.ticks = element_line(color = "white"), # Définir la couleur des traits des axes
+#       panel.background = element_rect(fill = "#FFFFFF", color = NA), # Définir la couleur de fond du panneau
+#       plot.background = element_rect(fill = "#FFFFFF", color = NA), # Définir la couleur de fond du graphique
+#       plot.title = element_text(color = "black"), # Définir la couleur du titre du graphique
+#       axis.title = element_text(color = "black"), # Définir la couleur des titres des axes
+#       axis.text = element_text(color = "black"), # Définir la couleur des étiquettes des axes
+#       axis.ticks = element_line(color = "black"), # Définir la couleur des traits des axes
 #       plot.margin = unit(c(0, 0, 0, 0), "mm"), # Supprimer les marges du graphique
-#       legend.text = element_text(color = "white", size = 14),
-#       legend.title = element_text(color = "white", size = 16),
+#       legend.text = element_text(color = "black", size = 14),
+#       legend.title = element_text(color = "black", size = 16),
 #       legend.position = "top", # Déplacer la légende en haut du graphique
 #       legend.box.background = element_rect(color = NA), # Supprimer la couleur de fond de la légende
 #       legend.key = element_blank() # Supprimer les carrés de couleur dans la légende
 #     )
-#   
+  
 #   # Renvoie le graphique
 #   p
 # }
-
-
-plot_smooth_line_ggplot <- function(df, col_name, line_color = "#FFFFFF", line_alpha = 0.1) {
-  
-  # Vérifier si la colonne index existe dans le data frame
-  if (!"index" %in% colnames(df)) {
-    # Créer une colonne index à partir d'une séquence numérique
-    df$index <- 1:nrow(df)
-  }
-  
-  # Filtrer les donnees pour les lignes où la colonne "G/D" vaut "G" ou "D"
-  DF_gauche <- df[df$`G.D` == "G", ]
-  DF_droit <- df[df$`G.D` == "D", ]
-  
-  # Calculer la moyenne pour chaque DataFrame
-  moyenne_gauche <- mean(DF_gauche[, col_name], na.rm = TRUE)
-  moyenne_droit <- mean(DF_droit[, col_name], na.rm = TRUE)
-  
-  # Calculer les valeurs minimale et maximale de la colonne
-  min_val <- min(df[, col_name])
-  max_val <- max(df[, col_name])
-  mean_val <- mean(df[, col_name])
-  
-  # Convertir la couleur de la ligne en notation RGBA
-  line_color_rgba <- rgb(t(col2rgb(line_color) / 255), alpha = line_alpha)
-  
-  # Créer un objet ggplot à partir du data frame
-  p <- ggplot(data = df, aes(x = index, y = !!rlang::sym(col_name))) +
-    geom_smooth(data = DF_gauche, aes(color = "G"), se = FALSE, linetype = "solid") +
-    geom_smooth(data = DF_droit, aes(color = "D"), se = FALSE, linetype = "solid") +
-    geom_hline(aes(yintercept = mean_val, color = "Mean"), linetype = "dotted", show.legend = TRUE) +
-    scale_color_manual(values = c("G" = "#C5243D", "D" = "#2C2F65", "Mean" = "#FF2c6c"),
-                       labels = c("Pied Gauche", "Pied Droit", "Moyenne")) +
-    labs(title = paste("Evolution de la fréquence de pas"),
-         x = "Nombre de pas",
-         y = "Fréquence en pas/secondes",
-         color = "Evolution par pied") +
-    theme_void() + # Supprimer les éléments du thème par défaut
-    theme(
-      panel.background = element_rect(fill = "#FFFFFF", color = NA), # Définir la couleur de fond du panneau
-      plot.background = element_rect(fill = "#FFFFFF", color = NA), # Définir la couleur de fond du graphique
-      plot.title = element_text(color = "black"), # Définir la couleur du titre du graphique
-      axis.title = element_text(color = "black"), # Définir la couleur des titres des axes
-      axis.text = element_text(color = "black"), # Définir la couleur des étiquettes des axes
-      axis.ticks = element_line(color = "black"), # Définir la couleur des traits des axes
-      plot.margin = unit(c(0, 0, 0, 0), "mm"), # Supprimer les marges du graphique
-      legend.text = element_text(color = "black", size = 14),
-      legend.title = element_text(color = "black", size = 16),
-      legend.position = "top", # Déplacer la légende en haut du graphique
-      legend.box.background = element_rect(color = NA), # Supprimer la couleur de fond de la légende
-      legend.key = element_blank() # Supprimer les carrés de couleur dans la légende
-    )
-  
-  # Renvoie le graphique
-  p
-}
 
 
 
